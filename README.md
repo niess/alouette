@@ -9,15 +9,18 @@ wrapper provides the following four interface functions to C :
 ```c
 /* Initialise TAUOLA++ through the wrapper. */
 void tauola_initialise(int mute, int * seed);
+
 /* Clean the wrapper. */
 void tauola_finalise(void);
+
 /* Perform a Monte-Carlo tau decay with TAUOLA. */
 void tauola_decay(int pid, double momentum[3], double * polarisation);
+
 /* Iterator over the decay products. */
 int tauola_product(int * pid, double momentum[3]);
 ```
 
-Check the *header* file and the provided *example* file for detailed usage.
+Check the [header](include/tauola-c.h) file and the provided [example](examples/example-basic.c) file for detailed usage.
 
 ## Portability
 This wrapper is meant to be used on a linux box. It relies on POSIX specifics,
