@@ -14,7 +14,7 @@ int main()
         for (i = 0; i < 3; i++) {
                 double momentum[3] = { 0., 0., 1E+05 };
                 double polarisation[3] = { 0., 0., 1. };
-                tauola_decay(15, momentum, polarisation);
+                if (!tauola_decay(15, momentum, polarisation)) continue;
 
                 int pid;
                 printf("# Event %d :\n", i + 1);

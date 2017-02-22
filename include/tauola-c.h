@@ -49,11 +49,14 @@ void tauola_finalise(void);
  * @param pid             The PDG ID of the decaying tau, i.e. 15 or -15.
  * @param momentum        The tau momentum at decay, in GeV/c.
  * @param polarisation    The tau polarisation vector, or `NULL`.
+ * @return                `0` if the decay failed. A non null integer
+ *                        otherwise.
  *
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
  * be provided. If `ǸULL` spin effects are neglected.
  */
-void tauola_decay(int pid, double momentum[3], double * polarisation);
+int tauola_decay(
+    int pid, const double momentum[3], const double * polarisation);
 
 /**
  * Iterator over the decay products.

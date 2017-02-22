@@ -119,10 +119,12 @@ void tauola_finalise(void)
 }
 
 /* Decay a tau with TAUOLA. */
-void tauola_decay(int pid, double momentum[3], double * polarisation)
+int tauola_decay(
+    int pid, const double momentum[3], const double * polarisation)
 {
         event.clear();
-        if (abs(pid) != 15) return;
+        index = 0;
+        if (abs(pid) != 15) return index;
         TauolaHEPEVTParticle * tau = new TauolaHEPEVTParticle(
             pid, 1, 0., 0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
         event.addParticle(tau);
@@ -134,13 +136,21 @@ void tauola_decay(int pid, double momentum[3], double * polarisation)
         tau->setE(sqrt(p2 + parmas_.amtau * parmas_.amtau));
         std_mute();
         if (polarisation != NULL) {
-                Tauola::decayOne(tau, false, polarisation[0], polarisation[1],
+                Tauola::decayOne(tau, true, polarisation[0], polarisation[1],
                     polarisation[2]);
         } else {
                 event.decayTaus();
         }
         std_unmute();
-        index = 1;
+
+        /* Check the result. */
+        TauolaHEPEVTParticle * p = event.getParticle(1);
+        if (isinf(p->getPx())) {
+		event.clear();
+		index = 0;
+	}
+        else index = 1;
+        return index;
 }
 
 /* Iterator over the tau decay products. */

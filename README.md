@@ -14,7 +14,7 @@ void tauola_initialise(int mute, int * seed);
 void tauola_finalise(void);
 
 /* Perform a Monte-Carlo tau decay with TAUOLA. */
-void tauola_decay(int pid, double momentum[3], double * polarisation);
+int tauola_decay(int pid, const double momentum[3], const double * polarisation);
 
 /* Iterator over the decay products. */
 int tauola_product(int * pid, double momentum[3]);
