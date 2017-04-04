@@ -146,10 +146,107 @@ int tauola_decay(
         /* Check the result. */
         TauolaHEPEVTParticle * p = event.getParticle(1);
         if (isinf(p->getPx())) {
-		event.clear();
-		index = 0;
-	}
+                event.clear();
+                index = 0;
+        }
         else index = 1;
+        return index;
+}
+
+/* Backward decay from a tau neutrino to a tau. */
+int tauola_undecay(
+    int pid, const double momentum[3], double polarisation, double * weight)
+{
+        *weight = 0.;
+        event.clear();
+        index = 0;
+        if (abs(pid) != 16) return index;
+        int tau_pid = pid > 0 ? 15 : -15;
+        TauolaHEPEVTParticle * p = new TauolaHEPEVTParticle(tau_pid, 1, 0.,
+            0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
+        event.addParticle(p);
+        std_mute();
+        event.decayTaus();
+        std_unmute();
+
+        /* Check the result. */
+        TauolaHEPEVTParticle * pi = event.getParticle(1);
+        if (isinf(pi->getPx())) {
+                event.clear();
+                index = 0;
+                return index;
+        }
+
+        /* Compute the parameters of the frame transform. */
+        const double energy = sqrt(momentum[0] * momentum[0] +
+            momentum[1] * momentum[1] + momentum[2] * momentum[2]);
+        int i;
+        for (i = 1; i < event.getParticleCount(); i++) {
+                pi = event.getParticle(i);
+                if (pi->getPdgID() == pid) break;
+        }
+        const double momentum0[3] = {pi->getPx(), pi->getPy(), pi->getPz()};
+        const double energy0 = sqrt(momentum0[0] * momentum0[0] +
+            momentum0[1] * momentum0[1] + momentum0[2] * momentum0[2]);
+
+        const double d = energy * energy0 + momentum[0] * momentum0[0] +
+            momentum[1] * momentum0[1] + momentum[2] * momentum0[2];
+        const double ee = energy + energy0;
+        const double gamma = ee * ee / d - 1.;
+        const double t0 = ee / d;
+        const double tau[3] = {t0 * (momentum[0] - momentum0[0]),
+            t0 * (momentum[1] - momentum0[1]),
+            t0 * (momentum[2] - momentum0[2])};
+
+        /* Set the backward Monte-Carlo weight. */
+        *weight = parmas_.amtau * parmas_.amtau * parmas_.amtau *
+            fabs(t0 * t0 * gamma / energy);
+
+        /* Apply the boost to the decay products */
+        double Et = 0., Pt[3] = {0., 0., 0.};
+        int j;
+        for (j = 1; j < event.getParticleCount(); j++) {
+                if (j == i) {
+                        Et += energy;
+                        Pt[0] += momentum[0];
+                        Pt[1] += momentum[1];
+                        Pt[2] += momentum[2];
+                        continue;
+                }
+
+                TauolaHEPEVTParticle * pj = event.getParticle(j);
+                if (pj->getStatus() != 1)
+                        continue;
+
+                const double P[3] = {pj->getPx(), pj->getPy(), pj->getPz()};
+                const double ptau = P[0] * tau[0] + P[1] * tau[1]
+                    + P[2] * tau[2];
+                const double m = pj->getMass();
+                const double E = sqrt(
+                    P[0] * P[0] + P[1] * P[1] + P[2] * P[2] + m * m);
+                const double tmp = ptau / (gamma + 1.) + E;
+                pj->setE(gamma * E + ptau);
+                pj->setPx(P[0] + tmp * tau[0]);
+                pj->setPy(P[1] + tmp * tau[1]);
+                pj->setPz(P[2] + tmp * tau[2]);
+                Et += pj->getE();
+                Pt[0] += pj->getPx();
+                Pt[1] += pj->getPy();
+                Pt[2] += pj->getPz();
+        }
+
+        /* Replace the daughter particle with the tau mother. In order to ensure
+         * the conservation of the energy-momentum, the mother's 4 momentum has
+         * been computed from the boosted products.
+         */
+        pi->setPdgID(tau_pid);
+        pi->setPx(Pt[0]);
+        pi->setPy(Pt[1]);
+        pi->setPz(Pt[2]);
+        pi->setE(Et);
+        pi->setMass(parmas_.amtau);
+
+        index = 1;
         return index;
 }
 

@@ -59,6 +59,24 @@ int tauola_decay(
     int pid, const double momentum[3], const double * polarisation);
 
 /**
+ * Perform a backward Monte-Carlo tau decay.
+ *
+ * @param pid             The PDG ID of the tau neutrino decaying product,
+ *                        i.e. 16 or -16.
+ * @param momentum        The neutrino momentum after decay, in GeV/c.
+ * @param polarisation    The primary tau longitudinal polarisation.
+ * @param weight          The backward Monte-Carlo weight.
+ * @return                `0` if the backward decay failed. A non null integer
+ *                        otherwise.
+ *
+ * Simulate a backward tau decay from a tau neutrino product. The a priori
+ * polarisation of the primary tau must be provided. Set *polarisation* to `0`
+ * in order to ignore spin effects.
+ */
+int tauola_undecay(
+    int pid, const double momentum[3], double polarisation, double * weight);
+
+/**
  * Iterator over the decay products.
  *
  * @param pid         The PDG ID of the retrieved product.

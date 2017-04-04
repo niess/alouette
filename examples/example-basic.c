@@ -12,9 +12,8 @@ int main()
         /* Randomise a few tau decays. */
         int i;
         for (i = 0; i < 3; i++) {
-                double momentum[3] = { 0., 0., 1E+05 };
-                double polarisation[3] = { 0., 0., 1. };
-                if (!tauola_decay(15, momentum, polarisation)) continue;
+                double weight, momentum[3] = { 0., 0., 1E+00 };
+                if (!tauola_undecay(16, momentum, 0, &weight)) continue;
 
                 int pid;
                 printf("# Event %d :\n", i + 1);
