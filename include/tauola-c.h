@@ -73,8 +73,8 @@ int tauola_decay(
  * polarisation of the primary tau must be provided. Set *polarisation* to `0`
  * in order to ignore spin effects.
  */
-int tauola_undecay(
-    int pid, const double momentum[3], double polarisation, double * weight);
+int tauola_undecay(int pid, const double momentum[3],
+    const double * polarisation, double * weight);
 
 /**
  * Iterator over the decay products.

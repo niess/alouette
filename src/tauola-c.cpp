@@ -16,6 +16,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <float.h>
+
 #include "Tauola/Tauola.h"
 #include "Tauola/TauolaHEPEVTEvent.h"
 #include "Tauola/TauolaHEPEVTParticle.h"
@@ -118,44 +120,143 @@ void tauola_finalise(void)
         initialised = 0;
 }
 
+/* Uniform PRN over [0,1]. */
+static double uniform01(void)
+{
+        return rand() / (double)(RAND_MAX);
+}
+
+/* Compute the rotation angle along the x or y *axis* in order to cancel the
+ * y or x component while ensuring a positive z component.
+ */
+static double rotation_angle(int axis, const double p[3])
+{
+        const int coaxis = 1 - axis;
+        if (p[2] == 0.) {
+                if (p[coaxis] > 0.) return -0.5 * M_PI;
+                else return 0.5 * M_PI;
+        }
+        else if (p[2] > 0.)
+                return -atan(p[coaxis] / p[2]);
+        else
+                return M_PI - atan(p[coaxis] / p[2]);
+}
+
+/* Rotation along the X or Y axis. */
+static void rotate(int axis, double phi, double v[3])
+{
+        const int coaxis = 1 - axis;
+        const double vxy = v[coaxis];
+        const double vz = v[2];
+        const double c = cos(phi), s = sin(phi);
+        v[coaxis] = c * vxy + s * vz;
+        v[2] = -s * vxy + c * vz;
+}
+
+/* Compute the rotation angles w.r.t. TAUOLA's rest frame, i.e. in order to
+ * align the tau's momentum with the z-axis.
+ */
+static void compute_angles(
+    int pid, const double momentum[3], double * phi_x, double * phi_y)
+{
+        double p[3] = {momentum[0], momentum[1], momentum[2]};
+        if (pid < 0) {
+                *phi_x = rotation_angle(0, p);
+                rotate(0, *phi_x, p);
+                *phi_y = rotation_angle(1, p);
+        }
+        else {
+                *phi_x = M_PI + rotation_angle(0, p);
+                rotate(0, *phi_x, p);
+                *phi_y = M_PI + rotation_angle(1, p);
+        }
+}
+
 /* Decay a tau with TAUOLA. */
 int tauola_decay(
     int pid, const double momentum[3], const double * polarisation)
 {
+        /* Build the event in the tau's rest frame. */
         event.clear();
         index = 0;
         if (abs(pid) != 15) return index;
-        TauolaHEPEVTParticle * tau = new TauolaHEPEVTParticle(
+        TauolaHEPEVTParticle * p = new TauolaHEPEVTParticle(
             pid, 1, 0., 0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
-        event.addParticle(tau);
-        tau->setPx(momentum[0]);
-        tau->setPy(momentum[1]);
-        tau->setPz(momentum[2]);
-        const double p2 = momentum[0] * momentum[0] +
-            momentum[1] * momentum[1] + momentum[2] * momentum[2];
-        tau->setE(sqrt(p2 + parmas_.amtau * parmas_.amtau));
-        std_mute();
+        event.addParticle(p);
+
+        /* Rotate the polarisation to TAUOLA's frame. */
+        double pol[3];
         if (polarisation != NULL) {
-                Tauola::decayOne(tau, true, polarisation[0], polarisation[1],
-                    polarisation[2]);
-        } else {
-                event.decayTaus();
+                double phi_x, phi_y;
+                pol[0] = polarisation[0];
+                pol[1] = polarisation[1];
+                pol[2] = polarisation[2];
+                compute_angles(pid, momentum, &phi_x, &phi_y);
+                rotate(1, -phi_y, pol);
+                rotate(0, -phi_x, pol);
         }
+
+        /* Decay the tau. */
+        std_mute();
+        for (;;) {
+                p->decay();
+                if (polarisation == NULL) break;
+                const double w = 0.5 * (1. +
+                    p->getPolarimetricX() * pol[0] +
+                    p->getPolarimetricY() * pol[1] +
+                    p->getPolarimetricZ() * pol[2]);
+                if (uniform01() <= w) break;
+        }
+        p->addDecayToEventRecord();
+        p->decayEndgame();
         std_unmute();
 
         /* Check the result. */
-        TauolaHEPEVTParticle * p = event.getParticle(1);
+        p = event.getParticle(1);
         if (isinf(p->getPx())) {
                 event.clear();
                 index = 0;
+                return index;
         }
-        else index = 1;
+
+        /* Boost the daughters to the lab frame. */
+        const double tau[3] = {momentum[0] / parmas_.amtau,
+            momentum[1] / parmas_.amtau, momentum[2] / parmas_.amtau};
+        const double gamma =
+            sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
+        index = 1;
+        int i;
+        for (i = 0; i < event.getParticleCount(); i++) {
+                p = event.getParticle(i);
+                if (p->getStatus() != 1) {
+                        continue;
+                }
+                const int aid = abs(p->getPdgID());
+                if ((aid == 24) || (aid > 9999)) {
+                        /* Correct the status of temporaries. */
+                        p->setStatus(2);
+                        continue;
+                }
+                if (gamma <= 1. + FLT_EPSILON) continue;
+
+                /* Apply the boost. */
+                const double P[3] = {p->getPx(), p->getPy(), p->getPz()};
+                const double E = p->getE();
+                const double ptau = P[0] * tau[0] + P[1] * tau[1]
+                    + P[2] * tau[2];
+                const double tmp = ptau / (gamma + 1.) + E;
+                p->setE(gamma * E + ptau);
+                p->setPx(P[0] + tmp * tau[0]);
+                p->setPy(P[1] + tmp * tau[1]);
+                p->setPz(P[2] + tmp * tau[2]);
+        }
+
         return index;
 }
 
 /* Backward decay from a tau neutrino to a tau. */
-int tauola_undecay(
-    int pid, const double momentum[3], double polarisation, double * weight)
+int tauola_undecay(int pid, const double momentum[3],
+    const double * polarisation, double * weight)
 {
         *weight = 0.;
         event.clear();
@@ -166,7 +267,12 @@ int tauola_undecay(
             0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
         event.addParticle(p);
         std_mute();
-        event.decayTaus();
+        if (polarisation != NULL) {
+                Tauola::decayOne(p, true, polarisation[0], polarisation[1],
+                    polarisation[2]);
+        } else {
+                event.decayTaus();
+        }
         std_unmute();
 
         /* Check the result. */
@@ -219,11 +325,9 @@ int tauola_undecay(
                         continue;
 
                 const double P[3] = {pj->getPx(), pj->getPy(), pj->getPz()};
+                const double E = pj->getE();
                 const double ptau = P[0] * tau[0] + P[1] * tau[1]
                     + P[2] * tau[2];
-                const double m = pj->getMass();
-                const double E = sqrt(
-                    P[0] * P[0] + P[1] * P[1] + P[2] * P[2] + m * m);
                 const double tmp = ptau / (gamma + 1.) + E;
                 pj->setE(gamma * E + ptau);
                 pj->setPx(P[0] + tmp * tau[0]);
