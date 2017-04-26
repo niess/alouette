@@ -2,8 +2,7 @@
  * Copyright (C) 2017 CNRS/IN2P3
  * Author: Valentin NIESS (niess@in2p3.fr)
  *
- * This software is a C library whose purpose is to transport high energy
- * muons or taus in various media.
+ * This software is a C library for the backward decay of taus wrapping TAUOLA.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
