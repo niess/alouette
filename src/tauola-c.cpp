@@ -123,53 +123,8 @@ void tauola_finalise(void)
 /* Uniform PRN over [0,1]. */
 static double uniform01(void)
 {
+        /* TODO: uniformise the PRN streams. */
         return rand() / (double)(RAND_MAX);
-}
-
-/* Compute the rotation angle along the x or y *axis* in order to cancel the
- * y or x component while ensuring a positive z component.
- */
-static double rotation_angle(int axis, const double p[3])
-{
-        const int coaxis = 1 - axis;
-        if (p[2] == 0.) {
-                if (p[coaxis] > 0.) return -0.5 * M_PI;
-                else return 0.5 * M_PI;
-        }
-        else if (p[2] > 0.)
-                return -atan(p[coaxis] / p[2]);
-        else
-                return M_PI - atan(p[coaxis] / p[2]);
-}
-
-/* Rotation along the X or Y axis. */
-static void rotate(int axis, double phi, double v[3])
-{
-        const int coaxis = 1 - axis;
-        const double vxy = v[coaxis];
-        const double vz = v[2];
-        const double c = cos(phi), s = sin(phi);
-        v[coaxis] = c * vxy + s * vz;
-        v[2] = -s * vxy + c * vz;
-}
-
-/* Compute the rotation angles w.r.t. TAUOLA's rest frame, i.e. in order to
- * align the tau's momentum with the z-axis.
- */
-static void compute_angles(
-    int pid, const double momentum[3], double * phi_x, double * phi_y)
-{
-        double p[3] = {momentum[0], momentum[1], momentum[2]};
-        if (pid < 0) {
-                *phi_x = rotation_angle(0, p);
-                rotate(0, *phi_x, p);
-                *phi_y = rotation_angle(1, p);
-        }
-        else {
-                *phi_x = M_PI + rotation_angle(0, p);
-                rotate(0, *phi_x, p);
-                *phi_y = M_PI + rotation_angle(1, p);
-        }
 }
 
 /* Decay a tau with TAUOLA. */
@@ -184,27 +139,15 @@ int tauola_decay(
             pid, 1, 0., 0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
         event.addParticle(p);
 
-        /* Rotate the polarisation to TAUOLA's frame. */
-        double pol[3];
-        if (polarisation != NULL) {
-                double phi_x, phi_y;
-                pol[0] = polarisation[0];
-                pol[1] = polarisation[1];
-                pol[2] = polarisation[2];
-                compute_angles(pid, momentum, &phi_x, &phi_y);
-                rotate(1, -phi_y, pol);
-                rotate(0, -phi_x, pol);
-        }
-
         /* Decay the tau. */
         std_mute();
         for (;;) {
                 p->decay();
                 if (polarisation == NULL) break;
                 const double w = 0.5 * (1. +
-                    p->getPolarimetricX() * pol[0] +
-                    p->getPolarimetricY() * pol[1] +
-                    p->getPolarimetricZ() * pol[2]);
+                    p->getPolarimetricX() * polarisation[0] +
+                    p->getPolarimetricY() * polarisation[1] +
+                    p->getPolarimetricZ() * polarisation[2]);
                 if (uniform01() <= w) break;
         }
         p->addDecayToEventRecord();
@@ -256,23 +199,26 @@ int tauola_decay(
 
 /* Backward decay from a tau neutrino to a tau. */
 int tauola_undecay(int pid, const double momentum[3],
-    const double * polarisation, double * weight)
+    polarisation_cb * polarisation, double * weight)
 {
+        /* Reset the event stack. */
         *weight = 0.;
         event.clear();
         index = 0;
         if (abs(pid) != 16) return index;
+
+        /* Build the event in the tau's rest frame. */
         int tau_pid = pid > 0 ? 15 : -15;
-        TauolaHEPEVTParticle * p = new TauolaHEPEVTParticle(tau_pid, 1, 0.,
-            0., 0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
-        event.addParticle(p);
+        TauolaHEPEVTParticle * p0 = new TauolaHEPEVTParticle(
+            tau_pid, 1, 0., 0., 0., parmas_.amtau, parmas_.amtau,
+            -1, -1, -1, -1);
+        event.addParticle(p0);
+
+        /* Decay an unpolarised tau in its rest frame. */
         std_mute();
-        if (polarisation != NULL) {
-                Tauola::decayOne(p, true, polarisation[0], polarisation[1],
-                    polarisation[2]);
-        } else {
-                event.decayTaus();
-        }
+        p0->decay();
+        p0->addDecayToEventRecord();
+        p0->decayEndgame();
         std_unmute();
 
         /* Check the result. */
@@ -283,36 +229,47 @@ int tauola_undecay(int pid, const double momentum[3],
                 return index;
         }
 
+        /* Get the daughter's index. */
+        int i = 1;
+        if (pi->getPdgID() != pid) {
+                for (i = 2; i < event.getParticleCount(); i++) {
+                        pi = event.getParticle(i);
+                        if (pi->getPdgID() == pid) break;
+                }
+        }
+
         /* Compute the parameters of the frame transform. */
         const double energy = sqrt(momentum[0] * momentum[0] +
             momentum[1] * momentum[1] + momentum[2] * momentum[2]);
-        int i;
-        for (i = 1; i < event.getParticleCount(); i++) {
-                pi = event.getParticle(i);
-                if (pi->getPdgID() == pid) break;
-        }
-        const double momentum0[3] = {pi->getPx(), pi->getPy(), pi->getPz()};
+        const double momentum0[3] = {
+            pi->getPx(), pi->getPy(), pi->getPz() };
         const double energy0 = sqrt(momentum0[0] * momentum0[0] +
             momentum0[1] * momentum0[1] + momentum0[2] * momentum0[2]);
-
         const double d = energy * energy0 + momentum[0] * momentum0[0] +
             momentum[1] * momentum0[1] + momentum[2] * momentum0[2];
         const double ee = energy + energy0;
         const double gamma = ee * ee / d - 1.;
         const double t0 = ee / d;
-        const double tau[3] = {t0 * (momentum[0] - momentum0[0]),
+        const double tau[3] = { t0 * (momentum[0] - momentum0[0]),
             t0 * (momentum[1] - momentum0[1]),
-            t0 * (momentum[2] - momentum0[2])};
+            t0 * (momentum[2] - momentum0[2]) };
 
-        /* Set the backward Monte-Carlo weight. */
-        *weight = parmas_.amtau * parmas_.amtau * parmas_.amtau *
-            fabs(t0 * t0 * gamma / energy);
-
-        /* Apply the boost to the decay products */
+        /* Boost the daughters to the lab frame. */
         double Et = 0., Pt[3] = {0., 0., 0.};
         int j;
         for (j = 1; j < event.getParticleCount(); j++) {
+                TauolaHEPEVTParticle * pj = event.getParticle(j);
+                if (pj->getStatus() != 1)
+                        continue;
+                const int aid = abs(pj->getPdgID());
+                if ((aid == 24) || (aid > 9999)) {
+                        /* Correct the status of temporaries. */
+                        pj->setStatus(2);
+                        continue;
+                }
+
                 if (j == i) {
+                        /* Update with the provided daughter data. */
                         Et += energy;
                         Pt[0] += momentum[0];
                         Pt[1] += momentum[1];
@@ -320,11 +277,9 @@ int tauola_undecay(int pid, const double momentum[3],
                         continue;
                 }
 
-                TauolaHEPEVTParticle * pj = event.getParticle(j);
-                if (pj->getStatus() != 1)
-                        continue;
-
-                const double P[3] = {pj->getPx(), pj->getPy(), pj->getPz()};
+                /* Apply the boost and update the sum. */
+                const double P[3] = {
+                    pj->getPx(), pj->getPy(), pj->getPz() };
                 const double E = pj->getE();
                 const double ptau = P[0] * tau[0] + P[1] * tau[1]
                     + P[2] * tau[2];
@@ -339,9 +294,22 @@ int tauola_undecay(int pid, const double momentum[3],
                 Pt[2] += pj->getPz();
         }
 
-        /* Replace the daughter particle with the tau mother. In order to ensure
-         * the conservation of the energy-momentum, the mother's 4 momentum has
-         * been computed from the boosted products.
+        /* Set the backward Monte-Carlo weight. */
+        *weight = parmas_.amtau * parmas_.amtau * parmas_.amtau *
+            fabs(t0 * t0 * gamma / energy);
+
+        /* Weight for the spin polarisation of the tau mother. */
+        if (polarisation != NULL) {
+                double pol[3];
+                polarisation(tau_pid, Pt, pol);
+                *weight *= 1. + p0->getPolarimetricX() * pol[0] +
+                    p0->getPolarimetricY() * pol[1] +
+                    p0->getPolarimetricZ() * pol[2];
+        }
+
+        /* Replace the daughter particle with the tau mother. In order to
+         * ensure the conservation of the energy-momentum, the mother's 4
+         * momentum has been computed from the boosted products.
          */
         pi->setPdgID(tau_pid);
         pi->setPx(Pt[0]);
@@ -350,6 +318,7 @@ int tauola_undecay(int pid, const double momentum[3],
         pi->setE(Et);
         pi->setMass(parmas_.amtau);
 
+        /* Set the stack index and return. */
         index = 1;
         return index;
 }

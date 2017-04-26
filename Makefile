@@ -8,7 +8,7 @@ LIBS := -lTauolaCxxInterface -lTauolaFortran -lm -lstdc++
 lib: lib/libtauola-c.so
 	@rm -f *.o
 
-examples: bin/example-basic
+examples: bin/example-forward bin/example-backward
 
 clean:
 	@rm -rf bin lib *.o

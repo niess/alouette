@@ -59,22 +59,36 @@ int tauola_decay(
     int pid, const double momentum[3], const double * polarisation);
 
 /**
+ * Callback for the tau polarisation in backward decays.
+ *
+ * @param pid             The PDG ID of the tau mother, i.e. 15 or -15.
+ * @param momentum        The tau's momentum at decay, in GeV/c.
+ * @param polarisation    The tau polarisation.
+ *
+ * In a backward decay, the spin polarisation of the tau mother is not known
+ * a priori. The user can supply an a posteriori value with this callback.
+ */
+typedef void polarisation_cb(
+    int pid, const double momentum[3], double * polarisation);
+
+/**
  * Perform a backward Monte-Carlo tau decay.
  *
  * @param pid             The PDG ID of the tau neutrino decaying product,
  *                        i.e. 16 or -16.
  * @param momentum        The neutrino momentum after decay, in GeV/c.
- * @param polarisation    The primary tau longitudinal polarisation.
+ * @param polarisation    A callback for the primary tau spin polarisation or
+ *                        `NULL`.
  * @param weight          The backward Monte-Carlo weight.
  * @return                `0` if the backward decay failed. A non null integer
  *                        otherwise.
  *
- * Simulate a backward tau decay from a tau neutrino product. The a priori
- * polarisation of the primary tau must be provided. Set *polarisation* to `0`
- * in order to ignore spin effects.
+ * Simulate a backward tau decay from a tau neutrino product. The polarisation
+ * of the primary tau can be provided a posteriori. Set *polarisation* to
+ * `NULL` in order to ignore spin effects.
  */
 int tauola_undecay(int pid, const double momentum[3],
-    const double * polarisation, double * weight);
+   polarisation_cb * polarisation, double * weight);
 
 /**
  * Iterator over the decay products.

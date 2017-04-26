@@ -7,14 +7,13 @@
 int main()
 {
         /* Initialise TAUOLA through its wrapper. */
-        int seed = 9768;
-        tauola_initialise(1, &seed);
+        tauola_initialise(1, NULL);
 
         /* Randomise a few tau decays. */
         const double polarisation[3] = { 1., 0., 0. };
         int i;
-        for (i = 0; i < 100000; i++) {
-                double momentum[3] = { 0., 1., 1. };
+        for (i = 0; i < 3; i++) {
+                double momentum[3] = { 0., 0., 1. };
                 if (!tauola_decay(15, momentum, polarisation)) continue;
 
                 int pid;
