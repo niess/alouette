@@ -1,5 +1,5 @@
 # ALOUETTE
-(**E**ngine for **T**aus and anti-**T**aus **E**ncapulsation with ta**UOLA**, backwards)
+(**E**ngine for **T**aus and anti-**T**aus **E**ncapulsation with ta-**UOLA**, backwards)
 
 ## Description
 
