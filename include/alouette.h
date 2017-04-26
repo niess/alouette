@@ -1,23 +1,26 @@
 /*
- *  A minimalist C wrapper for tauola++
- *  Copyright (C) 2017  Valentin Niess
+ * Copyright (C) 2017 CNRS/IN2P3
+ * Author: Valentin NIESS (niess@in2p3.fr)
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This software is a C library whose purpose is to transport high energy
+ * muons or taus in various media.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRENTY; without even the implied warranty of
- *  MERCHENTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef TAUOLA_C_H
-#define TAUOLA_C_H
+#ifndef ALOUETTE_H
+#define ALOUETTE_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,15 +39,15 @@ extern "C" {
  * __Note__ : if *seed* is `ǸULL` the pseudo random engine is initialised from
  * /dev/urandom.
  */
-void tauola_initialise(int mute, int * seed);
+void alouette_initialise(int mute, int * seed);
 
 /**
  * Finalise the wrapper.
  */
-void tauola_finalise(void);
+void alouette_finalise(void);
 
 /**
- * Perform a Monte-Carlo tau decay.
+ * Perform a forward Monte-Carlo tau decay.
  *
  * @param pid             The PDG ID of the decaying tau, i.e. 15 or -15.
  * @param momentum        The tau momentum at decay, in GeV/c.
@@ -55,7 +58,7 @@ void tauola_finalise(void);
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
  * be provided. If `ǸULL` spin effects are neglected.
  */
-int tauola_decay(
+int alouette_decay(
     int pid, const double momentum[3], const double * polarisation);
 
 /**
@@ -87,7 +90,7 @@ typedef void polarisation_cb(
  * of the primary tau can be provided a posteriori. Set *polarisation* to
  * `NULL` in order to ignore spin effects.
  */
-int tauola_undecay(int pid, const double momentum[3],
+int alouette_undecay(int pid, const double momentum[3],
    polarisation_cb * polarisation, double * weight);
 
 /**
@@ -98,12 +101,12 @@ int tauola_undecay(int pid, const double momentum[3],
  * @return            `0` if no more product is available. A non null integer
  *                    otherwise.
  *
- * Loop over this routine after a `tauola_decay` in order to retrieve all
+ * Loop over this routine after an `alouette_decay` in order to retrieve all
  * the decay products.
  *
  * __Warning__ : the decay products are consumed by the iterator.
  */
-int tauola_product(int * pid, double momentum[3]);
+int alouette_product(int * pid, double momentum[3]);
 
 #ifdef __cplusplus
 }

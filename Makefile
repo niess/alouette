@@ -5,7 +5,7 @@ LIBS := -lTauolaCxxInterface -lTauolaFortran -lm -lstdc++
 
 .PHONY: lib examples clean
 
-lib: lib/libtauola-c.so
+lib: lib/libalouette.so
 	@rm -f *.o
 
 examples: bin/example-forward bin/example-backward
@@ -19,4 +19,4 @@ lib/lib%.so: src/%.cpp include/%.h
 
 bin/example-%: examples/example-%.c lib
 	@mkdir -p bin
-	@gcc -o $@ $(CFLAGS) $(INCLUDE) $< -Llib -ltauola-c $(LIBS)
+	@gcc -o $@ $(CFLAGS) $(INCLUDE) $< -Llib -lalouette $(LIBS)
