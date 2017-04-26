@@ -26,11 +26,11 @@ int alouette_product(int * pid, double momentum[3]);
 
 Check the [header](include/alouette.h) file and the provided example files for detailed usage.
 
-## Portability
+## Portability
 This wrapper is meant to be used on a linux box. It relies on POSIX specifics,
 e.g. `dup2` and it assumes `/dev/urandom` to be available.
 
-## Thread safety
+## Thread safety
 TAUOLA nor this wrapper do **not** support **multi-threading**.
 
 ## License
