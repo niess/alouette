@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 CNRS/IN2P3
+ * Copyright (C) 2017 Université Clermont Auvergne, CNRS/IN2P3, LPC
  * Author: Valentin NIESS (niess@in2p3.fr)
  *
  * This software is a C library for the backward decay of taus wrapping TAUOLA.

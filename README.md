@@ -1,11 +1,13 @@
 # ALOUETTE
-(**E**ngine for **T**aus and anti-**T**aus **E**ncapulsation with ta-**UOLA**, backwards)
+(**E**nvironment for **T**aus and anti-**T**aus **E**ncapsulation with
+ta-**UOLA**, backwards)
 
 ## Description
 
-ALOUETTE is a backward Monte-Carlo engine wrapping the [C++ TAUOLA interface](http://tauolapp.web.cern.ch/tauolapp/). It requires TAUOLA++ to
-be installed with HEPEVT enabled, e.g. `./configure --without-hepmc`. The
-wrapper API provides the following C functions :
+ALOUETTE is a backward Monte-Carlo wrapper for the [C++ TAUOLA interface](http://tauolapp.web.cern.ch/tauolapp/).
+It requires TAUOLA++ to be installed with HEPEVT enabled, e.g.
+`./configure --without-hepmc`. The wrapper's API provides the following
+C functions :
 
 ```c
 /* Initialise TAUOLA++ through the wrapper. */
@@ -24,7 +26,8 @@ int alouette_undecay(int pid, const double momentum[3], polarisation_cb * polari
 int alouette_product(int * pid, double momentum[3]);
 ```
 
-Check the [header](include/alouette.h) file and the provided example files for detailed usage.
+Check the [header](include/alouette.h) file and the provided example files for
+detailed usage.
 
 ## Portability
 This wrapper is meant to be used on a linux box. It relies on POSIX specifics,
