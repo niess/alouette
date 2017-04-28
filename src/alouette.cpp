@@ -146,10 +146,10 @@ int alouette_decay(
         for (;;) {
                 p->decay();
                 if (polarisation == NULL) break;
-                const double w = 0.5 * (1. +
-                    p->getPolarimetricX() * polarisation[0] +
-                    p->getPolarimetricY() * polarisation[1] +
-                    p->getPolarimetricZ() * polarisation[2]);
+                const double w =
+                    0.5 * (1. + p->getPolarimetricX() * polarisation[0] +
+                              p->getPolarimetricY() * polarisation[1] +
+                              p->getPolarimetricZ() * polarisation[2]);
                 if (uniform01() <= w) break;
         }
         p->addDecayToEventRecord();
@@ -165,8 +165,8 @@ int alouette_decay(
         }
 
         /* Boost the daughters to the lab frame. */
-        const double tau[3] = {momentum[0] / parmas_.amtau,
-            momentum[1] / parmas_.amtau, momentum[2] / parmas_.amtau};
+        const double tau[3] = { momentum[0] / parmas_.amtau,
+                momentum[1] / parmas_.amtau, momentum[2] / parmas_.amtau };
         const double gamma =
             sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
         index = 1;
@@ -185,10 +185,10 @@ int alouette_decay(
                 if (gamma <= 1. + FLT_EPSILON) continue;
 
                 /* Apply the boost. */
-                const double P[3] = {p->getPx(), p->getPy(), p->getPz()};
+                const double P[3] = { p->getPx(), p->getPy(), p->getPz() };
                 const double E = p->getE();
-                const double ptau = P[0] * tau[0] + P[1] * tau[1]
-                    + P[2] * tau[2];
+                const double ptau =
+                    P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
                 const double tmp = ptau / (gamma + 1.) + E;
                 p->setE(gamma * E + ptau);
                 p->setPx(P[0] + tmp * tau[0]);
@@ -211,9 +211,8 @@ int alouette_undecay(int pid, const double momentum[3],
 
         /* Build the event in the tau's rest frame. */
         int tau_pid = pid > 0 ? 15 : -15;
-        TauolaHEPEVTParticle * p0 = new TauolaHEPEVTParticle(
-            tau_pid, 1, 0., 0., 0., parmas_.amtau, parmas_.amtau,
-            -1, -1, -1, -1);
+        TauolaHEPEVTParticle * p0 = new TauolaHEPEVTParticle(tau_pid, 1, 0., 0.,
+            0., parmas_.amtau, parmas_.amtau, -1, -1, -1, -1);
         event.addParticle(p0);
 
         /* Decay an unpolarised tau in its rest frame. */
@@ -243,8 +242,7 @@ int alouette_undecay(int pid, const double momentum[3],
         /* Compute the parameters of the frame transform. */
         const double energy = sqrt(momentum[0] * momentum[0] +
             momentum[1] * momentum[1] + momentum[2] * momentum[2]);
-        const double momentum0[3] = {
-            pi->getPx(), pi->getPy(), pi->getPz() };
+        const double momentum0[3] = { pi->getPx(), pi->getPy(), pi->getPz() };
         const double energy0 = sqrt(momentum0[0] * momentum0[0] +
             momentum0[1] * momentum0[1] + momentum0[2] * momentum0[2]);
         const double d = energy * energy0 + momentum[0] * momentum0[0] +
@@ -253,16 +251,15 @@ int alouette_undecay(int pid, const double momentum[3],
         const double gamma = ee * ee / d - 1.;
         const double t0 = ee / d;
         const double tau[3] = { t0 * (momentum[0] - momentum0[0]),
-            t0 * (momentum[1] - momentum0[1]),
-            t0 * (momentum[2] - momentum0[2]) };
+                t0 * (momentum[1] - momentum0[1]),
+                t0 * (momentum[2] - momentum0[2]) };
 
         /* Boost the daughters to the lab frame. */
-        double Et = 0., Pt[3] = {0., 0., 0.};
+        double Et = 0., Pt[3] = { 0., 0., 0. };
         int j;
         for (j = 1; j < event.getParticleCount(); j++) {
                 TauolaHEPEVTParticle * pj = event.getParticle(j);
-                if (pj->getStatus() != 1)
-                        continue;
+                if (pj->getStatus() != 1) continue;
                 const int aid = abs(pj->getPdgID());
                 if ((aid == 24) || (aid > 9999)) {
                         /* Correct the status of temporaries. */
@@ -280,11 +277,10 @@ int alouette_undecay(int pid, const double momentum[3],
                 }
 
                 /* Apply the boost and update the sum. */
-                const double P[3] = {
-                    pj->getPx(), pj->getPy(), pj->getPz() };
+                const double P[3] = { pj->getPx(), pj->getPy(), pj->getPz() };
                 const double E = pj->getE();
-                const double ptau = P[0] * tau[0] + P[1] * tau[1]
-                    + P[2] * tau[2];
+                const double ptau =
+                    P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
                 const double tmp = ptau / (gamma + 1.) + E;
                 pj->setE(gamma * E + ptau);
                 pj->setPx(P[0] + tmp * tau[0]);
@@ -344,4 +340,14 @@ int alouette_product(int * pid, double momentum[3])
         event.clear();
         index = 0;
         return 0;
+}
+
+/* Getter for the polarimteric vector of the last decay. */
+void alouette_polarimetric(double polarimetric[3])
+{
+        if (event.getParticleCount() <= 0) return;
+        TauolaHEPEVTParticle * p = event.getParticle(0);
+        polarimetric[0] = p->getPolarimetricX();
+        polarimetric[1] = p->getPolarimetricY();
+        polarimetric[2] = p->getPolarimetricZ();
 }

@@ -90,7 +90,7 @@ typedef void polarisation_cb(
  * `NULL` in order to ignore spin effects.
  */
 int alouette_undecay(int pid, const double momentum[3],
-   polarisation_cb * polarisation, double * weight);
+    polarisation_cb * polarisation, double * weight);
 
 /**
  * Iterator over the decay products.
@@ -106,6 +106,16 @@ int alouette_undecay(int pid, const double momentum[3],
  * __Warning__ : the decay products are consumed by the iterator.
  */
 int alouette_product(int * pid, double momentum[3]);
+
+/**
+ * Getter for the polarimteric vector of the last decay.
+ *
+ * @param polarimetric    The polarimetric vector to fill.
+ *
+ * Call this routine after an `alouette_decay` in order to retrieve the
+ * polarimetric vector of the decay.
+ */
+void alouette_polarimetric(double polarimetric[3]);
 
 #ifdef __cplusplus
 }

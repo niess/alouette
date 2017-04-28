@@ -24,6 +24,9 @@ int alouette_undecay(int pid, const double momentum[3], polarisation_cb * polari
 
 /* Iterator over the decay products. */
 int alouette_product(int * pid, double momentum[3]);
+
+/* Getter for the polarimteric vector of the last decay. */
+void alouette_polarimetric(double polarimetric[3]);
 ```
 
 Check the [header](include/alouette.h) file and the provided example files for
