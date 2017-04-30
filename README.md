@@ -4,10 +4,9 @@ ta-**UOLA**, backwards)
 
 ## Description
 
-ALOUETTE is a backward Monte-Carlo wrapper for the [C++ TAUOLA interface](http://tauolapp.web.cern.ch/tauolapp/).
-It requires TAUOLA++ to be installed with HEPEVT enabled, e.g.
-`./configure --without-hepmc`. The wrapper's API provides the following
-C functions :
+ALOUETTE is a backward Monte-Carlo library for tau decays. It is built over
+tauola-fortran (v2.9) from the [C++ TAUOLA interface](http://tauolapp.web.cern.ch/tauolapp/).
+The library's API provides the following C functions :
 
 ```c
 /* Initialise TAUOLA++ through the wrapper. */
@@ -34,7 +33,7 @@ detailed usage.
 
 ## Portability
 This wrapper is meant to be used on a linux box. It relies on POSIX specifics,
-e.g. `dup2` and it assumes `/dev/urandom` to be available.
+e.g. it assumes `/dev/urandom` to be available.
 
 ## Thread safety
 TAUOLA nor this wrapper do **not** support **multi-threading**.

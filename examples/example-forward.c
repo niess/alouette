@@ -14,7 +14,7 @@ int main()
         int i;
         for (i = 0; i < 3; i++) {
                 double momentum[3] = { 0., 0., 1. };
-                if (!alouette_decay(15, momentum, polarisation)) continue;
+                if (alouette_decay(15, momentum, polarisation) != 0) continue;
 
                 int pid;
                 printf("# Event %d :\n", i + 1);

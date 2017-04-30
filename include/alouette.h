@@ -108,7 +108,7 @@ int alouette_undecay(int pid, const double momentum[3],
 int alouette_product(int * pid, double momentum[3]);
 
 /**
- * Getter for the polarimteric vector of the last decay.
+ * Getter for the polarimetric vector of the last decay.
  *
  * @param polarimetric    The polarimetric vector to fill.
  *
