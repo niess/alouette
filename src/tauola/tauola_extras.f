@@ -345,7 +345,7 @@ C AJWMOD fix sign bug, 2/22/99
         APKMAS=0.5488
       ELSE
         WRITE (IOUT,*) 'STOP IN APKMAS, WRONG IDENT=',IDENT
-        STOP
+        CALL SOFTSTP()
       ENDIF
       DCDMAS=APKMAS
       END
@@ -395,7 +395,7 @@ C AJWMOD fix sign bug, 2/22/99
         IPKDEF= 221
       ELSE
         WRITE (IOUT,*) 'STOP IN IPKDEF, WRONG IDENT=',IDENT
-        STOP
+        CALL SOFTSTP()
       ENDIF
       LUNPIK=IPKDEF
       END
@@ -735,7 +735,7 @@ C
         AMFIN=1.77703 !this mass is irrelevant if small, used in ME only
       ELSE
         WRITE(IOUT,*) 'INITWK: WRONG IDFX'
-        STOP
+        CALL SOFTSTP()
       ENDIF
 
       IF     (IDEX.EQ. 11) then      !electron
@@ -801,7 +801,7 @@ C
 
       ELSE
         WRITE(IOUT,*) 'INITWK: WRONG IDEX'
-        STOP
+        CALL SOFTSTP()
       ENDIF
 
 C ----------------------------------------------------------------------
@@ -867,7 +867,7 @@ C** NOTE THAT CONVENTIONALY Z0 COUPLING IS
 C** XOUPZ=(SIZO3-CHARGE*SWSQ)/SQRT(SWSQ*(1-SWSQ))
       RETURN
  901  WRITE (IOUT,*) ' STOP IN GIVIZO: WRONG PARAMS.'
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE PHYFIX(NSTOP,NSTART)
       COMMON/LUJETS/N,K(4000,5),P(4000,5),V(4000,5)

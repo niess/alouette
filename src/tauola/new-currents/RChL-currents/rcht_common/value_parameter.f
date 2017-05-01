@@ -13,13 +13,14 @@ C information on 3 pion sub-channel under construction obtained
 C J3PI=1 means 3 prong
 C J3PI=2 means 1 prong
 C to be initialized in routine DPHSAA of tauola.f
+      COMMON / INOUT / INUT,IOUT
       COMMON /CHANOPT/ J3PI
       INTEGER          J3PI
       IF (J3PI.EQ.1.OR.J3PI.EQ.2) THEN
         JJ=J3PI
       ELSE
-       write(*,*) 'FROM value_parameter.f CH3PIGET, wrong J3PI=',J3PI
-       stop
+       write(IOUT,*) 'FROM value_parameter.f CH3PIGET, wrong J3PI=',J3PI
+       CALL SOFTSTP()
       ENDIF
       end
 
@@ -44,7 +45,7 @@ C provides sign of tau, to be used in CP dependent parts of current.
         SIGN=-IDFF/ABS(IDFF)
       ELSE
         WRITE (IOUT,*) 'STOP IN OLACHNL: KTOM=',KTOM
-        STOP
+        CALL SOFTSTP()
       ENDIF
       END
 

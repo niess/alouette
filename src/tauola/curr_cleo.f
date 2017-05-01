@@ -11,7 +11,7 @@ C     M. Gell-Mann, D. Sharp, W. Wagner Phys. Rev. Lett 8 (1962) 261.
 C BUT, rewritten to be more general and less "theoretical",
 C  using parameters tuned by Vasia and DSC.
 C     ==================================================================
- 
+
       COMMON / PARMAS / AMTAU,AMNUTA,AMEL,AMNUE,AMMU,AMNUMU
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
@@ -283,6 +283,3 @@ C --- end of the non omega current (3 possibilities)
 
       ENDIF
       END
- 
-
-

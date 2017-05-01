@@ -72,7 +72,7 @@ C
       RETURN
  902  WRITE(IOUT,9020)
  9020 FORMAT(' ----- JAKER: WRONG NCHAN')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DEKAY(KTO,HX)
 C     ***********************
@@ -280,10 +280,10 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT,9020)
  9020 FORMAT(' ----- DEKAY: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
  910  WRITE(IOUT,9100)
  9100 FORMAT(' ----- DEKAY: WRONG VALUE OF KTO ')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DEKAY1(IMOD,HH,ISGN)
 C     *******************************
@@ -635,10 +635,10 @@ CHBU  split into two
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXAY: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
  910  WRITE(IOUT, 9100)
  9100 FORMAT(' ----- DEXAY: WRONG VALUE OF KTO ')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DEXAY1(KTO,JAKIN,JAK,POL,ISGN)
 C ---------------------------------------------------------------------
@@ -734,7 +734,7 @@ C     =====
       RETURN
  902  WRITE(IOUT,9020)
  9020 FORMAT(' ----- DEXEL: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DEXMU(MODE,ISGN,POL,PNU,PWB,Q1,Q2,PH)
 C ----------------------------------------------------------------------
@@ -774,7 +774,7 @@ C     =====
       RETURN
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXMU: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADMEL(MODE,ISGN,HHV,PNU,PWB,Q1,Q2,PHX)
 C ----------------------------------------------------------------------
@@ -879,7 +879,7 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADMEL: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADMMU(MODE,ISGN,HHV,PNU,PWB,Q1,Q2,PHX)
 C ----------------------------------------------------------------------
@@ -979,7 +979,7 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADMMU: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DPHSEL(DGAMX,HVX,XNX,PAAX,QPX,XAX,PHX)
 C XNX,XNA was flipped in parameters of dphsel and dphsmu
@@ -1072,7 +1072,7 @@ C
         PRSOFT=1.-PRHARD
          IF(PRSOFT.LT.0.1) THEN
            WRITE(IOUT,*), 'ERROR IN DRCMU; PRSOFT=',PRSOFT
-           STOP
+           CALL SOFTSTP()
          ENDIF
 C
         RR5=RRR(5)
@@ -1552,7 +1552,7 @@ C     =====
       RETURN
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXRO: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADMRO(MODE,ISGN,HHV,PNU,PRO,PIC,PIZ)
 C ----------------------------------------------------------------------
@@ -1653,7 +1653,7 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADMRO: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DPHSRO(DGAMT,HV,PN,PR,PIC,PIZ)
 C ----------------------------------------------------------------------
@@ -1754,6 +1754,7 @@ C MNUM DECAY MODE IDENTIFIER.
 C
 C     called by : DPHSAA
 C ----------------------------------------------------------------------
+      COMMON / INOUT / INUT,IOUT
       COMMON / PARMAS / AMTAU,AMNUTA,AMEL,AMNUE,AMMU,AMNUMU
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
@@ -1778,8 +1779,8 @@ C
       ELSEIF (MNUM.EQ.3) THEN
         CALL CURR_KK0(PIM1,PIM2,HADCUR)
       ELSE
-       write(*,*) 'DAM2PI: wrong MNUM= ',MNUM
-        STOP
+       write(IOUT,*) 'DAM2PI: wrong MNUM= ',MNUM
+        CALL SOFTSTP()
       ENDIF
 
 C
@@ -1824,6 +1825,8 @@ C
       REAL*4            AMTAU,AMNUTA,AMEL,AMNUE,AMMU,AMNUMU
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
+      COMMON / INOUT / INUT,IOUT
+      INTEGER INUT, IOUT
       COMMON /IPChT/ IVER
       INTEGER        IVER
       INTEGER FF2PIRHO
@@ -1856,8 +1859,8 @@ c                             !  par(1)=F_pi(0)=1-fixed
          HADCUR(K)=QQ(k)* fpibel(sqrt(pksd),1)
         ENDDO
        ELSE
-        write(*,*) 'problem in 2-scalars current FF2PIRHO=',FF2PIRHO
-        stop
+        write(IOUT,*) 'problem in 2-scalars current FF2PIRHO=',FF2PIRHO
+        CALL SOFTSTP()
        ENDIF
       ELSEIF (IVER.EQ.0) THEN ! cleo
         DO K=1,4
@@ -1865,8 +1868,8 @@ c                             !  par(1)=F_pi(0)=1-fixed
         ENDDO
 
       ELSE
-        write(*,*) 'problem in 2-scalars current IVER=',IVER
-        stop
+        write(IOUT,*) 'problem in 2-scalars current IVER=',IVER
+        CALL SOFTSTP()
       ENDIF
 
       END
@@ -1991,6 +1994,8 @@ C clebsh gordan (or so ...)  coefs for 3 scalar final states
       implicit none
 C IVER=0  TAUOLA cleo COEF(I,J) =  COEFc(I,J)
 C IVER=1  TAUOLA RChL COEF(I,J) =  COEFr(I,J)
+      COMMON / INOUT / INUT,IOUT
+      INTEGER INUT,IOUT
       COMMON /IPChT/ IVER
       INTEGER        IVER
       REAL COEFc(1:5,0:7)
@@ -2079,8 +2084,8 @@ C
       ELSEIF (IVER.EQ.1) THEN
        COEF=COEFrr(I,J)
       ELSE
-       write(*,*) 'wrong IVER=',IVER
-       stop
+       write(IOUT,*) 'wrong IVER=',IVER
+       CALL SOFTSTP()
       ENDIF
       END
 
@@ -2162,7 +2167,7 @@ C     =====
       RETURN
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXAA: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADMAA(MODE,ISGN,HHV,PNU,PAA,PIM1,PIM2,PIPL,JAA)
 C ----------------------------------------------------------------------
@@ -2263,7 +2268,7 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADMAA: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DPHSAA(DGAMT,HV,PN,PAA,PIM1,PIM2,PIPL,JAA)
 C ----------------------------------------------------------------------
@@ -2456,7 +2461,7 @@ C     =====
       RETURN
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXKS: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADMKS(MODE,ISGN,HHV,PNU,PKS,PKK,PPI,JKST)
 C ----------------------------------------------------------------------
@@ -2569,7 +2574,7 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADMKS: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DPHSKS(DGAMT,HV,PN,PKS,PKK,PPI,JKST)
 C ----------------------------------------------------------------------
@@ -2788,7 +2793,7 @@ C
 C
       IF ((JNPI.LE.0).OR.JNPI.GT.20) THEN
        WRITE(6,*) 'JNPI OUTSIDE RANGE DEFINED BY WETMAX; JNPI=',JNPI
-       STOP
+       CALL SOFTSTP()
       ENDIF
 
 C TAU MOMENTUM
@@ -3637,7 +3642,7 @@ C -- TAUOLA paper and J.H. Kuhn and Santamaria Z. Phys C 48 (1990) 445
         SIGN=-IDFF/ABS(IDFF)
       ELSE
         WRITE (IOUT,*) 'STOP IN CLAXI: KTOM=',KTOM
-        STOP
+        CALL SOFTSTP()
       ENDIF
 C
       DO 10 I=1,4
@@ -3818,8 +3823,8 @@ CC
         ELSEIF (IVER.EQ.1) THEN
          FPI=GETFPIRPT(1) ! GET  defined in in ffwid3pi.f  of RChL-currents
         ELSE
-         write(*,*) 'wrong IVER=',IVER
-         stop
+         write(IOUT,*) 'wrong IVER=',IVER
+         CALL SOFTSTP()
         ENDIF
        FNORM(0)=CCABIB/FPI
        FNORM(1)=CCABIB/FPI
@@ -3920,7 +3925,7 @@ C ----------------------------------------------------------------------
         SIGN=-IDFF/ABS(IDFF)
       ELSE
         WRITE (IOUT,*) 'STOP IN PROD5: KTOM=',KTOM
-        STOP
+        CALL SOFTSTP()
       ENDIF
 C
 C EPSILON( p1(1), p2(2), p3(3), (4) ) = 1
@@ -3974,7 +3979,7 @@ C     =====
       RETURN
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DEXNEW: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
       END
       SUBROUTINE DADNEW(MODE,ISGN,HV,PNU,PWB,PNPI,JNPI)
 C ----------------------------------------------------------------------
@@ -4142,10 +4147,10 @@ C     =====
      $  /,1X,15(5H*****)/)
  902  WRITE(IOUT, 9020)
  9020 FORMAT(' ----- DADNEW: LACK OF INITIALISATION')
-      STOP
+      CALL SOFTSTP()
  903  WRITE(IOUT, 9030) JNPI,MODE
  9030 FORMAT(' ----- DADNEW: WRONG JNPI',2I5)
-      STOP
+      CALL SOFTSTP()
       END
 
 

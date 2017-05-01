@@ -25,11 +25,31 @@
 extern "C" {
 #endif
 
+/** Return codes for the API functions. */
+enum alouette_return {
+        /** Execution was successful. */
+        ALOUETTE_RETURN_SUCCESS = 0,
+        /** A parameter is out of its validity range. */
+        ALOUETTE_RETURN_DOMAIN_ERROR,
+        /** A floating point error occured. */
+        ALOUETTE_RETURN_FLOATING_ERROR,
+        /** A read /write error occured. */
+        ALOUETTE_RETURN_IO_ERROR,
+        /** A file couldn't be found. */
+        ALOUETTE_RETURN_PATH_ERROR,
+        /** A TAUOLA error occured. */
+        ALOUETTE_RETURN_TAULOA_ERROR,
+        /** The number of ALOUETTE return codes.  */
+        ALOUETTE_N_RETURNS
+};
+
 /**
- * Initialise the wrapper and TAUOLA++.
+ * Initialise the wrapper and TAUOLA.
  *
  * @param mute    Flag to mute all low level messages from TAUOLA.
  * @param seed    The seed for TAUOLA's pseudo random engine or `NULL`.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
  *
  * Initialise the TAUOLA++ library. Call this function prior to any other
  * wrapper's routine. If *mute* is not zero all messages from TAUOLA are
@@ -37,13 +57,36 @@ extern "C" {
  *
  * __Note__ : if *seed* is `ǸULL` the pseudo random engine is initialised from
  * /dev/urandom.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_IO_ERROR        Couldn't read from /dev/urandom.
+ *
+ *     PUMAS_RETURN_PATH_ERROR         Couldn't open /dev/urandom.
+ *
+ *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-void alouette_initialise(int mute, int * seed);
+enum alouette_return alouette_initialise(int mute, int * seed);
 
 /**
  * Finalise the wrapper.
+ *
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-void alouette_finalise(void);
+enum alouette_return alouette_finalise(void);
+
+/**
+ * Return a string describing an `alouette_return` code.
+ *
+ * This function is analog to the C89 `strerror` function but specific to
+ * ALOUETTE return codes.
+ */
+const char * alouette_strerror(enum alouette_return rc);
 
 /**
  * Perform a forward Monte-Carlo tau decay.
@@ -51,13 +94,21 @@ void alouette_finalise(void);
  * @param pid             The PDG ID of the decaying tau, i.e. 15 or -15.
  * @param momentum        The tau momentum at decay, in GeV/c.
  * @param polarisation    The tau polarisation vector, or `NULL`.
- * @return                `0` if the decay failed. A non null integer
- *                        otherwise.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
  *
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
  * be provided. If `ǸULL` spin effects are neglected.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_DOMAIN_ERROR    The provided *pid* is not valid.
+ *
+ *     PUMAS_RETURN_FLOATING_ERROR     A floating point error occured.
+ *
+ *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-int alouette_decay(
+enum alouette_return alouette_decay(
     int pid, const double momentum[3], const double * polarisation);
 
 /**
@@ -82,14 +133,22 @@ typedef void polarisation_cb(
  * @param polarisation    A callback for the primary tau spin polarisation or
  *                        `NULL`.
  * @param weight          The backward Monte-Carlo weight.
- * @return                `0` if the backward decay failed. A non null integer
- *                        otherwise.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
  *
  * Simulate a backward tau decay from a tau neutrino product. The polarisation
  * of the primary tau can be provided a posteriori. Set *polarisation* to
  * `NULL` in order to ignore spin effects.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_DOMAIN_ERROR    The provided *pid* is not valid.
+ *
+ *     PUMAS_RETURN_FLOATING_ERROR     A floating point error occured.
+ *
+ *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-int alouette_undecay(int pid, const double momentum[3],
+enum alouette_return alouette_undecay(int pid, const double momentum[3],
     polarisation_cb * polarisation, double * weight);
 
 /**
@@ -97,25 +156,35 @@ int alouette_undecay(int pid, const double momentum[3],
  *
  * @param pid         The PDG ID of the retrieved product.
  * @param momentum    The momentum of the retrieved product, in GeV/c.
- * @return            `0` if no more product is available. A non null integer
- *                    otherwise.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
  *
  * Loop over this routine after an `alouette_decay` in order to retrieve all
  * the decay products.
  *
  * __Warning__ : the decay products are consumed by the iterator.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_DOMAIN_ERROR    No product is available.
  */
-int alouette_product(int * pid, double momentum[3]);
+enum alouette_return alouette_product(int * pid, double momentum[3]);
 
 /**
  * Getter for the polarimetric vector of the last decay.
  *
  * @param polarimetric    The polarimetric vector to fill.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
  *
- * Call this routine after an `alouette_decay` in order to retrieve the
- * polarimetric vector of the decay.
+ * Call this routine after an `alouette_decay` or `alouette_undecay` in order
+ * to retrieve the polarimetric vector of the decay.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_DOMAIN_ERROR    No decay is available.
  */
-void alouette_polarimetric(double polarimetric[3]);
+enum alouette_return alouette_polarimetric(double polarimetric[3]);
 
 #ifdef __cplusplus
 }
