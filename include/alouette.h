@@ -121,7 +121,7 @@ enum alouette_return alouette_decay(
  * In a backward decay, the spin polarisation of the tau mother is not known
  * a priori. The user can supply an a posteriori value with this callback.
  */
-typedef void polarisation_cb(
+typedef void alouette_polarisation_cb(
     int pid, const double momentum[3], double * polarisation);
 
 /**
@@ -149,7 +149,7 @@ typedef void polarisation_cb(
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    polarisation_cb * polarisation, double * weight);
+    alouette_polarisation_cb * polarisation, double * weight);
 
 /**
  * Iterator over the decay products.

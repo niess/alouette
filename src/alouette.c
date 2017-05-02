@@ -301,7 +301,7 @@ enum alouette_return alouette_decay(
 
 /* Backward decay from a tau neutrino to a tau. */
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    polarisation_cb * polarisation, double * weight)
+    alouette_polarisation_cb * polarisation, double * weight)
 {
         enum alouette_return rc;
 

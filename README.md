@@ -22,7 +22,7 @@ const char * alouette_strerror(enum alouette_return rc);
 enum alouette_return alouette_decay(int pid, const double momentum[3], const double * polarisation);
 
 /* Perform a backward Monte-Carlo tau decay. */
-enum alouette_return alouette_undecay(int pid, const double momentum[3], polarisation_cb * polarisation, double * weight);
+enum alouette_return alouette_undecay(int pid, const double momentum[3], alouette_polarisation_cb * polarisation, double * weight);
 
 /* Iterator over the decay products. */
 enum alouette_return alouette_product(int * pid, double momentum[3]);
