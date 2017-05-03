@@ -29,6 +29,11 @@
 /* The ALOUETTE API. */
 #include "alouette.h"
 
+#ifndef M_PI
+/* Define pi, if unknown. */
+#define M_PI 3.14159265358979323846
+#endif
+
 /* Stack for TAUOLA's decay products. */
 static struct {
 #define STACK_MAX_DEPTH 16
@@ -299,16 +304,117 @@ enum alouette_return alouette_decay(
         return rc;
 }
 
+/* Multiply a matrix and a vector. */
+static void mv_multiply(const double * M, double * v)
+{
+        const double v0 = M[0] * v[0] + M[1] * v[1] + M[2] * v[2];
+        const double v1 = M[3] * v[0] + M[4] * v[1] + M[5] * v[2];
+        const double v2 = M[6] * v[0] + M[7] * v[1] + M[8] * v[2];
+        v[0] = v0;
+        v[1] = v1;
+        v[2] = v2;
+}
+
+/* Rotate a direction randomly but constraining the polar angle. */
+static enum alouette_return rotate_direction(
+    double cos_theta, double * direction)
+{
+        /* Check the numerical sine. */
+        const double stsq = 1. - cos_theta * cos_theta;
+        if (stsq <= 0.) return ALOUETTE_RETURN_FLOATING_ERROR;
+        const double st = sqrt(stsq);
+
+        /* select the co-vectors for the local basis. */
+        double u0x = 0., u0y = 0., u0z = 0.;
+        const double a0 = fabs(direction[0]);
+        const double a1 = fabs(direction[1]);
+        const double a2 = fabs(direction[2]);
+        if (a0 > a1) {
+                if (a0 > a2) {
+                        const double nrm =
+                            1. / sqrt(direction[0] * direction[0] +
+                                     direction[2] * direction[2]);
+                        u0x = -direction[2] * nrm, u0z = direction[0] * nrm;
+                } else {
+                        const double nrm =
+                            1. / sqrt(direction[1] * direction[1] +
+                                     direction[2] * direction[2]);
+                        u0y = direction[2] * nrm, u0z = -direction[1] * nrm;
+                }
+        } else {
+                if (a1 > a2) {
+                        const double nrm =
+                            1. / sqrt(direction[0] * direction[0] +
+                                     direction[1] * direction[1]);
+                        u0x = direction[1] * nrm, u0y = -direction[0] * nrm;
+                } else {
+                        const double nrm =
+                            1. / sqrt(direction[1] * direction[1] +
+                                     direction[2] * direction[2]);
+                        u0y = direction[2] * nrm, u0z = -direction[1] * nrm;
+                }
+        }
+        const double u1x = u0y * direction[2] - u0z * direction[1];
+        const double u1y = u0z * direction[0] - u0x * direction[2];
+        const double u1z = u0x * direction[1] - u0y * direction[0];
+
+        /* Apply the rotation. */
+        const double phi = M_PI * (1. - 2. * uniform01());
+        const double cp = cos(phi);
+        const double sp = sin(phi);
+        direction[0] = cos_theta * direction[0] + st * (cp * u0x + sp * u1x);
+        direction[1] = cos_theta * direction[1] + st * (cp * u0y + sp * u1y);
+        direction[2] = cos_theta * direction[2] + st * (cp * u0z + sp * u1z);
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
+/* Build a rotation matrix from vi to vf. */
+static enum alouette_return build_rotation(
+        double * vi, double * vf, double norm_f, double * R)
+{
+        /* Build the rotation axis. */
+        double n[3] = { vi[1] * vf[2] - vi[2] * vf[1],
+            vi[2] * vf[0] - vi[0] * vf[2], vi[0] * vf[1] - vi[1] * vf[0] };
+        double nrm = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
+        if (fabs(nrm) <= FLT_EPSILON) return ALOUETTE_RETURN_FLOATING_ERROR;
+        nrm = 1. / sqrt(nrm);
+        n[0] *= nrm;
+        n[1] *= nrm;
+        n[2] *= nrm;
+
+        /* Compute the rotation angle. */
+        const double theta =
+            -acos((vi[0] * vf[0] + vi[1] * vf[1] + vi[2] * vf[2]) / norm_f);
+
+        /* Fill the rotation matrix. */
+        const double c = cos(theta);
+        const double s = sin(theta);
+        const double c1 = 1. - c;
+        R[0] = n[0] * n[0] * c1 + c;
+        R[1] = n[0] * n[1] * c1 - n[2] * s;
+        R[2] = n[0] * n[2] * c1 + n[1] * s;
+        R[3] = n[0] * n[1] * c1 + n[2] * s;
+        R[4] = n[1] * n[1] * c1 + c;
+        R[5] = n[1] * n[2] * c1 - n[0] * s;
+        R[6] = n[0] * n[2] * c1 - n[1] * s;
+        R[7] = n[1] * n[2] * c1 + n[0] * s;
+        R[8] = n[2] * n[2] * c1 + c;
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
 /* Backward decay from a tau neutrino to a tau. */
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    alouette_polarisation_cb * polarisation, double * weight)
+    alouette_polarisation_cb * polarisation, double bias, double * weight)
 {
         enum alouette_return rc;
 
         /* Reset the stack. */
         stack.length = 0;
         stack.index = -1;
-        if (abs(pid) != 16) return stack.index;
+        if ((abs(pid) != 16) || (bias <= -1.))
+            return ALOUETTE_RETURN_DOMAIN_ERROR;
 
         /* Decay an unpolarised tau in its rest frame. */
         if ((rc = tauola_decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS) return rc;
@@ -326,9 +432,34 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         for (i = 0, pi = stack.p; i < stack.length; i++, pi += 4)
                 if (stack.pid[i] == pid) break;
 
-        /* Compute the parameters of the frame transform. */
+        /* Re-draw the daughter's direction in the mother's rest frame using
+         * a biased distribution, towards the daughter's direction in the
+         * laboratory frame.
+         */
+        *weight = 1.;
         const double energy = sqrt(momentum[0] * momentum[0] +
             momentum[1] * momentum[1] + momentum[2] * momentum[2]);
+        double * R = NULL;
+        double R_storage[9];
+        if (bias != 0.) {
+                /* Draw the new direction. */
+                double u[3] = { momentum[0] / energy, momentum[1] / energy,
+                    momentum[2] / energy };
+                const double r = uniform01();
+                const double cos_theta = 2. * pow(r, 1. / (bias + 1.)) - 1.;
+                if ((rotate_direction(cos_theta, u) ==
+                        ALOUETTE_RETURN_SUCCESS) &&
+                    (build_rotation(u, pi, pi[3], R_storage) ==
+                        ALOUETTE_RETURN_SUCCESS)) {
+                        /* Update the generated state and the BMC weight. */
+                        R = R_storage;
+                        mv_multiply(R, pi);
+                        mv_multiply(R, stack.polarimetric);
+                        *weight = 0.5 * (cos_theta + 1.) / ((bias + 1.) * r);
+                }
+        }
+
+        /* Compute the parameters of the frame transform. */
         const double d = energy * pi[3] + momentum[0] * pi[0] +
             momentum[1] * pi[1] + momentum[2] * pi[2];
         const double ee = energy + pi[3];
@@ -351,6 +482,9 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
                         continue;
                 }
 
+                /* Apply the bias rotation. */
+                if (R != NULL) mv_multiply(R, pj);
+
                 /* Apply the boost and update the sum. */
                 const double ptau =
                     pj[0] * tau[0] + pj[1] * tau[1] + pj[2] * tau[2];
@@ -366,7 +500,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         }
 
         /* Set the backward Monte-Carlo weight. */
-        *weight = parmas_.amtau * parmas_.amtau * parmas_.amtau *
+        *weight *= parmas_.amtau * parmas_.amtau * parmas_.amtau *
             fabs(t0 * t0 * gamma / energy);
 
         /* Weight for the spin polarisation of the tau mother. */

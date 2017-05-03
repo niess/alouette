@@ -13,16 +13,18 @@ The library's API provides the following C functions :
 enum alouette_return alouette_initialise(int mute, int * seed);
 
 /* Clean the wrapper. */
-enum alouette_return tauola_finalise(void);
+enum alouette_return alouette_finalise(void);
 
 /* Return a string describing an `alouette_return` code. */
 const char * alouette_strerror(enum alouette_return rc);
 
 /* Perform a forward Monte-Carlo tau decay. */
-enum alouette_return alouette_decay(int pid, const double momentum[3], const double * polarisation);
+enum alouette_return alouette_decay(
+    int pid, const double momentum[3], const double * polarisation);
 
 /* Perform a backward Monte-Carlo tau decay. */
-enum alouette_return alouette_undecay(int pid, const double momentum[3], alouette_polarisation_cb * polarisation, double * weight);
+enum alouette_return alouette_undecay(int pid, const double momentum[3],
+    alouette_polarisation_cb * polarisation, double bias, double * weight);
 
 /* Iterator over the decay products. */
 enum alouette_return alouette_product(int * pid, double momentum[3]);

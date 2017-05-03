@@ -37,7 +37,7 @@ int main()
         int i;
         for (i = 0; i < 3; i++) {
                 double weight, momentum[3] = { 0., 0., 1. };
-                if (alouette_undecay(16, momentum, polarise, &weight) !=
+                if (alouette_undecay(16, momentum, polarise, 0., &weight) !=
                     ALOUETTE_RETURN_SUCCESS)
                         continue;
 

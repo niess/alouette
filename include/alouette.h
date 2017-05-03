@@ -62,7 +62,7 @@ enum alouette_return {
  *
  *     ALOUETTE_RETURN_IO_ERROR        Couldn't read from /dev/urandom.
  *
- *     PUMAS_RETURN_PATH_ERROR         Couldn't open /dev/urandom.
+ *     ALOUETE_RETURN_PATH_ERROR       Couldn't open /dev/urandom.
  *
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
@@ -102,11 +102,11 @@ const char * alouette_strerror(enum alouette_return rc);
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR    The provided *pid* is not valid.
+ *     ALOUETTE_RETURN_DOMAIN_ERROR      The provided *pid* is not valid.
  *
- *     PUMAS_RETURN_FLOATING_ERROR     A floating point error occured.
+ *     ALOUETTE_RETURN_FLOATING_ERROR    A floating point error occured.
  *
- *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
+ *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
 enum alouette_return alouette_decay(
     int pid, const double momentum[3], const double * polarisation);
@@ -132,6 +132,7 @@ typedef void alouette_polarisation_cb(
  * @param momentum        The neutrino momentum after decay, in GeV/c.
  * @param polarisation    A callback for the primary tau spin polarisation or
  *                        `NULL`.
+ * @param bias            Tuning parameter for the bias.
  * @param weight          The backward Monte-Carlo weight.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
@@ -140,16 +141,22 @@ typedef void alouette_polarisation_cb(
  * of the primary tau can be provided a posteriori. Set *polarisation* to
  * `NULL` in order to ignore spin effects.
  *
+ * The *bias* parameters allows to control the biasing of the angular
+ * distribution of decay products in the mother's rest frame. It must be in the
+ * range ]-1, +inf[, though values close to `-1` or much higher than `10` are
+ * likely to be numerically unstable. Set it to to `0` for an unbiased
+ * distribution, i.e. isotropic.
+ *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR    The provided *pid* is not valid.
+ *     ALOUETTE_RETURN_DOMAIN_ERROR      The provided *pid* is not valid.
  *
- *     PUMAS_RETURN_FLOATING_ERROR     A floating point error occured.
+ *     ALOUETTE_RETURN_FLOATING_ERROR    A floating point error occured.
  *
- *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
+ *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    alouette_polarisation_cb * polarisation, double * weight);
+    alouette_polarisation_cb * polarisation, double bias, double * weight);
 
 /**
  * Iterator over the decay products.
