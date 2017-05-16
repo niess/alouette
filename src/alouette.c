@@ -167,7 +167,7 @@ void filhep_(int * n, int * status, int * pid, int * mother_first,
 {
         if (*status != 1) return;
         const int aid = abs(*pid);
-        if ((aid == 24) || (aid > 9999)) return;
+        if ((aid == 24) || (aid == 313) || (aid == 323) || (aid > 9999)) return;
         stack.pid[stack.length] = *pid;
         double * const P = stack.p + 4 * stack.length;
         P[0] = (double)p4[0];
