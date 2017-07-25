@@ -2754,6 +2754,7 @@ C ----------------------------------------------------------------------
 C IT SIMULATES MULTIPI DECAY IN TAU REST FRAME WITH
 C Z-AXIS OPPOSITE TO NEUTRINO MOMENTUM
 C ----------------------------------------------------------------------
+      COMMON / INOUT / INUT,IOUT
       COMMON / PARMAS / AMTAU,AMNUTA,AMEL,AMNUE,AMMU,AMNUMU
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
@@ -2792,7 +2793,7 @@ C
 C
 C
       IF ((JNPI.LE.0).OR.JNPI.GT.20) THEN
-       WRITE(6,*) 'JNPI OUTSIDE RANGE DEFINED BY WETMAX; JNPI=',JNPI
+       WRITE(IOUT,*) 'JNPI OUTSIDE RANGE DEFINED BY WETMAX; JNPI=',JNPI
        CALL SOFTSTP()
       ENDIF
 
@@ -2911,10 +2912,10 @@ C ---  2.02.94 ZW 1 line
           DO KK=1,ND
             XNPI=XNPI+AMPIK(KK,JNPI)
           ENDDO
-       WRITE(6,*) 'ROUNDING INSTABILITY IN DPHNPI ?'
-       WRITE(6,*) 'AMW=',AMW,'XNPI=',XNPI
-       WRITE(6,*) 'IF =AMW= IS NEARLY EQUAL =XNPI= THAT IS IT'
-       WRITE(6,*) 'PHS=',PHS,'PHSMAX=',PHSMAX
+       WRITE(IOUT,*) 'ROUNDING INSTABILITY IN DPHNPI ?'
+       WRITE(IOUT,*) 'AMW=',AMW,'XNPI=',XNPI
+       WRITE(IOUT,*) 'IF =AMW= IS NEARLY EQUAL =XNPI= THAT IS IT'
+       WRITE(IOUT,*) 'PHS=',PHS,'PHSMAX=',PHSMAX
        GOTO 500
       ENDIF
       IF(RN(1)*PHSMAX*WETMAX(JNPI).GT.PHS) GO TO 100

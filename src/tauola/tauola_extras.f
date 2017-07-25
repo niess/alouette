@@ -1161,7 +1161,7 @@ c Written by: Wieslaw Placzek            date: 22.07.1994
 c Last update: 3/29/95                     by: M.S.
 c
       implicit DOUBLE PRECISION (a-h,o-z)
-      parameter (nout=6)
+      COMMON / INOUT / INUT,IOUT
       DOUBLE PRECISION v(4),p(4),q(4),pp(4),vv(4)
       save
 !
@@ -1170,7 +1170,7 @@ c
  1    p(i)=pp(i)
       amv=(v(4)**2-v(1)**2-v(2)**2-v(3)**2)
       if (amv.le.0d0) then
-        write(6,*) 'bosstv: warning amv**2=',amv
+        write(IOUT,*) 'bosstv: warning amv**2=',amv
       endif
       amv=sqrt(abs(amv))
       if (idir.eq.-1) then
@@ -1180,7 +1180,7 @@ c
         q(4)=(-p(1)*v(1)-p(2)*v(2)-p(3)*v(3)+p(4)*v(4))/amv
         wsp =-(q(4)+p(4))/(v(4)+amv)
       else
-        write(nout,*)' >>> boostv: wrong value of idir = ',idir
+        write(IOUT,*)' >>> boostv: wrong value of idir = ',idir
       endif
       q(1)=p(1)+wsp*v(1)
       q(2)=p(2)+wsp*v(2)
