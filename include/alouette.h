@@ -47,7 +47,9 @@ enum alouette_return {
  * Initialise the wrapper and TAUOLA.
  *
  * @param mute    Flag to mute all low level messages from TAUOLA.
- * @param seed    The seed for TAUOLA's pseudo random engine or `NULL`.
+ * @param state   The pseudo random state vector for TAUOLA's builtin PRNG or
+ *                  `NULL`.
+ * @param offset  The offset to apply to the random sequence.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
@@ -55,7 +57,7 @@ enum alouette_return {
  * wrapper's routine. If *mute* is not zero all messages from TAUOLA are
  * redirected to /dev/null.
  *
- * __Note__ : if *seed* is `ǸULL` the pseudo random engine is initialised from
+ * __Note__ : if *state* is `ǸULL` the pseudo random engine is initialised from
  * /dev/urandom.
  *
  * __Error codes__
@@ -66,7 +68,7 @@ enum alouette_return {
  *
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-enum alouette_return alouette_initialise(int mute, int * seed);
+enum alouette_return alouette_initialise(int mute, unsigned int state[3]);
 
 /**
  * Finalise the wrapper.
@@ -192,6 +194,13 @@ enum alouette_return alouette_product(int * pid, double momentum[3]);
  *     ALOUETTE_RETURN_DOMAIN_ERROR    No decay is available.
  */
 enum alouette_return alouette_polarimetric(double polarimetric[3]);
+
+/**
+ * Get TAUOLA's builtin random state.
+ *
+ * @param state    The state vector to fill.
+ */
+void alouette_random_state(unsigned int state[3]);
 
 #ifdef __cplusplus
 }
