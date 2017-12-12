@@ -77,6 +77,7 @@ static enum alouette_return tauola_initialise(char * tauola_log, int seed)
         /* Set the seed for the random engine. */
         extern void rmarin_(int * ijklin, int * ntotin, int * ntot2n);
         int ntotin = 0, ntot2n = 0;
+        seed = seed % 900000001;
         rmarin_(&seed, &ntotin, &ntot2n);
 
         /* Configure the common block for selecting the decay modes. */
