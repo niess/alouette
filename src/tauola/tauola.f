@@ -1071,7 +1071,7 @@ C
         IF (  ITDKRC.EQ.0) PRHARD=0D0
         PRSOFT=1.-PRHARD
          IF(PRSOFT.LT.0.1) THEN
-           WRITE(IOUT,*), 'ERROR IN DRCMU; PRSOFT=',PRSOFT
+           WRITE(IOUT,*) 'ERROR IN DRCMU; PRSOFT=',PRSOFT
            CALL SOFTSTP()
          ENDIF
 C
