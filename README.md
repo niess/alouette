@@ -1,22 +1,19 @@
 # ALOUETTE
-(**E**nvironment for **T**aus and anti-**T**aus **E**ncapsulation with
-ta-**UOLA**, backwards)
+(Y**ET** another encapsula**TE**d ta**UOLA**, backwards)
 
 ## Description
 
 ALOUETTE is a backward Monte-Carlo library for tau decays. It is built over
-tauola-fortran (v2.9) from the [C++ TAUOLA interface](http://tauolapp.web.cern.ch/tauolapp/).
-The library's API provides the following C functions :
+tauola-fortran (v2.9, LHC) from the [TAUOLA universal
+interface](http://tauolapp.web.cern.ch/tauolapp/).  The library API provides
+the following C functions:
 
 ```c
-/* Initialise the wrapper and TAUOLA. */
-enum alouette_return alouette_initialise(int mute, int * seed);
+/* Initialise TAUOLA and the ALOUETTE wrapper. */
+enum alouette_return alouette_initialise(unsigned long * seed, double * xk0dec);
 
-/* Clean the wrapper. */
-enum alouette_return alouette_finalise(void);
-
-/* Return a string describing an `alouette_return` code. */
-const char * alouette_strerror(enum alouette_return rc);
+/* Return a string describing the last (error) message(s). */
+const char * alouette_message(enum alouette_return rc);
 
 /* Perform a forward Monte-Carlo tau decay. */
 enum alouette_return alouette_decay(
@@ -34,16 +31,16 @@ enum alouette_return alouette_polarimetric(double polarimetric[3]);
 ```
 
 Check the [header](include/alouette.h) file and the provided example files for
-detailed usage.
+more detailed usage.
 
 ## Portability
 
-This wrapper is meant to be used on a linux box. It relies on POSIX specifics,
+This wrapper is meant to be used on UNIX systems. It relies on POSIX specifics,
 e.g. it assumes `/dev/urandom` to be available.
 
 ## Thread safety
 
-TAUOLA nor this wrapper do **not** support **multi-threading**.
+TAUOLA and the ALOUETTE wrapper do **not** support **multi-threading**.
 
 ## License
 
