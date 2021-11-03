@@ -44,7 +44,7 @@ enum alouette_return {
 };
 
 /**
- * Initialise the wrapper and TAUOLA.
+ * Initialise TAUOLA and the ALOUETTE wrapper.
  *
  * @param seed    Seed for the builtin PRNG or `NULL`.
  * @param xk0dec  Factor for radiative corrections or `NULL`.
@@ -185,25 +185,38 @@ enum alouette_return alouette_product(int * pid, double momentum[3]);
 enum alouette_return alouette_polarimetric(double polarimetric[3]);
 
 /**
- * Get the random seed for the built-in PRNG.
+ * The library PRNG, uniform over (0,1).
+ *
+ * The ALOUETTE library uses a single random stream, replacing TAUOLA's `RANMAR`
+ * random engine with a Merseene Twister algorithm. The PRNG can be seeded with
+ * the `alouette_random_seed_set` function. The current seed value is returned
+ * by the `alouette_random_seed_get` function.
+ *
+ * __Note__: custom PRNGs can be used, instead of the built-in one, by
+ * overriding the `alouette_random` pointer. The replacement must return pseudo
+ * random numbers uniformly distributed over (0, 1).
+ */
+extern float (*alouette_random)(void);
+
+/**
+ * Get the random seed for the library built-in PRNG.
  *
  * @return The current random seed.
  *
  * Call this routine after `alouette_initialise` in order to retrieve the random
  * seed of the built-in PRNG.
  */
-unsigned long alouette_seed_get(void);
+unsigned long alouette_random_seed_get(void);
 
 /**
- * Set the random seed for the built-in PRNG.
+ * Set the random seed for the library built-in PRNG.
  *
  * @param seed    The random seed or `NULL`.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
  * Reset the built-in PRNG with a new random *seed*. If *seed* is `NULL`, then
- * the pseudo random engine is initialised using the OS entropy, i.e.
- * /dev/urandom.
+ * the PRNG is initialised using the OS entropy, i.e.  /dev/urandom.
  *
  * __Error codes__
  *
@@ -211,7 +224,7 @@ unsigned long alouette_seed_get(void);
  *
  *     ALOUETE_RETURN_PATH_ERROR       Couldn't open /dev/urandom.
  */
-enum alouette_return alouette_seed_set(unsigned long * seed);
+enum alouette_return alouette_random_seed_set(unsigned long * seed);
 
 #ifdef __cplusplus
 }

@@ -136,7 +136,7 @@ static struct {
 } _random_stream;
 
 /* Get the random seed for the built-in PRNG. */
-unsigned long alouette_seed_get(void)
+unsigned long alouette_random_seed_get(void)
 {
         return _random_stream.seed;
 }
@@ -188,7 +188,7 @@ static enum alouette_return random_initialise(unsigned long * seed_ptr)
 }
 
 /* Set the random seed for the built-in PRNG. */
-enum alouette_return alouette_seed_set(unsigned long * seed)
+enum alouette_return alouette_random_seed_set(unsigned long * seed)
 {
         message_reset();
         return random_initialise(seed);
@@ -243,12 +243,16 @@ static float random_uniform01(void)
         return (float)u;
 }
 
+/* Export the built-in PRNG. */
+typedef float random_cb(void);
+random_cb * alouette_random = &random_uniform01;
+
 /* Random stream wrapper for TAUOLA */
 void tauola_random(float * r, int * n)
 {
         int i;
         for (i = 0; i < *n; i++) {
-                r[i] = random_uniform01();
+                r[i] = alouette_random();
         }
 }
 
@@ -297,7 +301,7 @@ enum alouette_return alouette_initialise(
         tauola_taupos.npa = 1;
         tauola_taupos.npb = 1;
 
-        /* Initialise the builtin random engine with an arbitrary seed for
+        /* Initialise the built-in PRNG with an arbitrary seed for
          * TAUOLA warmup.
          */
         unsigned long tmp = 1357894;
@@ -310,12 +314,16 @@ enum alouette_return alouette_initialise(
         int state = -1;
         tauola_jaki.jak1 = 0;
         tauola_jaki.jak2 = 0;
+        random_cb * random = alouette_random; /* Use the built-in PRNG for
+                                               * TAUOLA warmup.
+                                               */
         tauola_decay(&state, polarimeter);
+        alouette_random = random;
 
         /* Clear the particle stack. */
         memset(&_stack, 0x0, sizeof _stack);
 
-        /* Initialise the random engine with the the user supplied seed. */
+        /* Initialise the built-in PRNG with the the user supplied seed. */
         if ((rc = random_initialise(seed)) != ALOUETTE_RETURN_SUCCESS)
                 return rc;
 
@@ -389,7 +397,7 @@ enum alouette_return alouette_decay(
                     0.5 * (1. + _stack.polarimetric[0] * polarisation[0] +
                               _stack.polarimetric[1] * polarisation[1] +
                               _stack.polarimetric[2] * polarisation[2]);
-                if (random_uniform01() <= w) break;
+                if (alouette_random() <= w) break;
         }
         if ((rc = decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
 
@@ -484,7 +492,7 @@ static enum alouette_return rotate_direction(
         const double u1z = u0x * direction[1] - u0y * direction[0];
 
         /* Apply the rotation. */
-        const double phi = M_PI * (1. - 2. * random_uniform01());
+        const double phi = M_PI * (1. - 2. * alouette_random());
         const double cp = cos(phi);
         const double sp = sin(phi);
         direction[0] = cos_theta * direction[0] + st * (cp * u0x + sp * u1x);
@@ -581,7 +589,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
                 /* Draw the new direction. */
                 double u[3] = { momentum[0] / energy, momentum[1] / energy,
                         momentum[2] / energy };
-                const double r = random_uniform01();
+                const double r = alouette_random();
                 const double cos_theta = 2. * pow(r, 1. / (bias + 1.)) - 1.;
                 if ((rotate_direction(cos_theta, u) ==
                         ALOUETTE_RETURN_SUCCESS) &&
