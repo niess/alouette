@@ -26,13 +26,6 @@ static void polarise(int pid, const double momentum[3], double * polarisation)
 
 int main()
 {
-        /* Initialise the ALOUETTE library. */
-        enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL, NULL)) != ALOUETTE_RETURN_SUCCESS) {
-                fprintf(stderr, "alouette: %s\n", alouette_message());
-                exit(EXIT_FAILURE);
-        };
-
         /* Randomise a few tau decays. */
         int i;
         for (i = 0; i < 3; i++) {

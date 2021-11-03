@@ -30,13 +30,9 @@ enum alouette_return {
         /** Execution was successful. */
         ALOUETTE_RETURN_SUCCESS = 0,
         /** A parameter is out of its validity range. */
-        ALOUETTE_RETURN_DOMAIN_ERROR,
+        ALOUETTE_RETURN_VALUE_ERROR,
         /** A floating point error occured. */
         ALOUETTE_RETURN_FLOATING_ERROR,
-        /** A read /write error occured. */
-        ALOUETTE_RETURN_IO_ERROR,
-        /** A file couldn't be found. */
-        ALOUETTE_RETURN_PATH_ERROR,
         /** A TAUOLA error occured. */
         ALOUETTE_RETURN_TAULOA_ERROR,
         /** The number of ALOUETTE return codes.  */
@@ -46,30 +42,24 @@ enum alouette_return {
 /**
  * Initialise TAUOLA and the ALOUETTE wrapper.
  *
- * @param seed    Seed for the builtin PRNG or `NULL`.
  * @param xk0dec  Factor for radiative corrections or `NULL`.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
- * Initialise the TAUOLA library and its wrapper. Call this function prior to
- * any other library function.
- *
- * __Note__ : if *seed* is `NULL`, then the pseudo random engine is initialised
- * using the OS entropy, i.e. /dev/urandom.
+ * This function allows to initialise the library with custom settings. Note
+ * that if not done explictly, the library is initialised on need with default
+ * settings. Thus, this function must be called before other library functions
+ * if custom settings are desired.
  *
  * __Note__ : if *xk0dec* is `NULL`, then a default value of 1E-03 is used,
  * following Jezabek et al., CPC 70 (1992) 69-76.
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_IO_ERROR        Couldn't read from /dev/urandom.
- *
- *     ALOUETE_RETURN_PATH_ERROR       Couldn't open /dev/urandom.
- *
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
 enum alouette_return alouette_initialise(
-    unsigned long * seed, double * xk0dec);
+    double * xk0dec);
 
 /**
  * Return the last (error) message(s).
@@ -93,14 +83,16 @@ const char * alouette_message(void);
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR      The provided *pid* is not valid.
+ *     ALOUETTE_RETURN_VALUE_ERROR       The provided *pid* is not valid.
  *
  *     ALOUETTE_RETURN_FLOATING_ERROR    A floating point error occured.
  *
  *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
 enum alouette_return alouette_decay(
-    int pid, const double momentum[3], const double * polarisation);
+    int pid,
+    const double momentum[3],
+    const double * polarisation);
 
 /**
  * Callback for the tau polarisation in backward decays.
@@ -113,7 +105,9 @@ enum alouette_return alouette_decay(
  * a priori. The user can supply an a posteriori value with this callback.
  */
 typedef void alouette_polarisation_cb(
-    int pid, const double momentum[3], double * polarisation);
+    int pid,
+    const double momentum[3],
+    double * polarisation);
 
 /**
  * Perform a backward Monte-Carlo tau decay.
@@ -140,14 +134,18 @@ typedef void alouette_polarisation_cb(
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR      The provided *pid* is not valid.
+ *     ALOUETTE_RETURN_VALUE_ERROR       The provided *pid* is not valid.
  *
  *     ALOUETTE_RETURN_FLOATING_ERROR    A floating point error occured.
  *
  *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
-enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    alouette_polarisation_cb * polarisation, double bias, double * weight);
+enum alouette_return alouette_undecay(
+    int pid,
+    const double momentum[3],
+    alouette_polarisation_cb * polarisation,
+    double bias,
+    double * weight);
 
 /**
  * Iterator over the decay products.
@@ -164,9 +162,11 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR    No product is available.
+ *     ALOUETTE_RETURN_VALUE_ERROR    No product is available.
  */
-enum alouette_return alouette_product(int * pid, double momentum[3]);
+enum alouette_return alouette_product(
+    int * pid,
+    double momentum[3]);
 
 /**
  * Getter for the polarimetric vector of the last decay.
@@ -180,9 +180,10 @@ enum alouette_return alouette_product(int * pid, double momentum[3]);
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_DOMAIN_ERROR    No decay is available.
+ *     ALOUETTE_RETURN_VALUE_ERROR    No decay is available.
  */
-enum alouette_return alouette_polarimetric(double polarimetric[3]);
+enum alouette_return alouette_polarimetric(
+    double polarimetric[3]);
 
 /**
  * The library PRNG, uniform over (0,1).
@@ -199,32 +200,22 @@ enum alouette_return alouette_polarimetric(double polarimetric[3]);
 extern float (*alouette_random)(void);
 
 /**
- * Get the random seed for the library built-in PRNG.
+ * Get the random seed of the built-in PRNG.
  *
- * @return The current random seed.
- *
- * Call this routine after `alouette_initialise` in order to retrieve the random
- * seed of the built-in PRNG.
+ * @return The PRNG random seed.
  */
-unsigned long alouette_random_seed_get(void);
+unsigned long alouette_random_seed(void);
 
 /**
- * Set the random seed for the library built-in PRNG.
+ * (Re)set the built-in PRNG.
  *
- * @param seed    The random seed or `NULL`.
- * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
- * code is returned as detailed below.
+ * @param seed    The PRNG random seed or `NULL`.
  *
  * Reset the built-in PRNG with a new random *seed*. If *seed* is `NULL`, then
- * the PRNG is initialised using the OS entropy, i.e.  /dev/urandom.
- *
- * __Error codes__
- *
- *     ALOUETTE_RETURN_IO_ERROR        Couldn't read from /dev/urandom.
- *
- *     ALOUETE_RETURN_PATH_ERROR       Couldn't open /dev/urandom.
+ * the PRNG is initialised using the OS entropy, e.g. /dev/urandom.
  */
-enum alouette_return alouette_random_seed_set(unsigned long * seed);
+void alouette_random_set(
+    unsigned long * seed);
 
 #ifdef __cplusplus
 }

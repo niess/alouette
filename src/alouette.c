@@ -42,7 +42,7 @@ static struct {
         int pid[STACK_MAX_SIZE];
         double polarimetric[4];
         double p[4 * STACK_MAX_SIZE];
-} _stack = { 0, -1 };
+} _stack = { 0, -1};
 
 /* Stack for message(s) */
 static struct {
@@ -129,48 +129,45 @@ static enum alouette_return message_error(
 
 /* Data structure for the built-in MT pseudo random engine. */
 #define MT_PERIOD 624
-static struct {
+struct random_stream {
+        int initialised;
         unsigned long seed;
         int index;
         unsigned long data[MT_PERIOD];
-} _random_stream;
+};
 
-/* Get the random seed for the built-in PRNG. */
-unsigned long alouette_random_seed_get(void)
+static struct random_stream _random_stream = {0};
+
+/* Get the random seed of the built-in PRNG. */
+unsigned long alouette_random_seed(void)
 {
         return _random_stream.seed;
 }
 
-/* Get a random seed from /dev/urandom */
-static enum alouette_return random_get_seed(unsigned long * seed)
+/* Get a random seed from the OS, e.g. /dev/urandom */
+static unsigned long random_get_seed(void)
 {
-        const char * urandom = "/dev/urandom";
-        FILE * fp = fopen(urandom, "rb");
-        if (fp == NULL) {
-                return message_error(ALOUETTE_RETURN_PATH_ERROR,
-                    "could not open %s", urandom);
-        }
-        if (fread(seed, sizeof(long), 1, fp) <= 0) {
+        FILE * fp = fopen("/dev/urandom", "rb");
+        if (fp != NULL) {
+                unsigned long seed;
+                size_t n = fread(&seed, sizeof(long), 1, fp);
                 fclose(fp);
-                return message_error(ALOUETTE_RETURN_IO_ERROR,
-                    "could not read from %s", urandom);
+                if (n == 1) return seed;
         }
-        fclose(fp);
-        return ALOUETTE_RETURN_SUCCESS;
+
+        return 0; /* XXX Fallback method? */
 }
 
-/* Initialise the built-in PRNG. */
-static enum alouette_return random_initialise(unsigned long * seed_ptr)
+/* Set the random seed for the built-in PRNG. */
+void alouette_random_set(unsigned long * seed)
 {
-        if (seed_ptr == NULL) {
-                /* Get a seed from /dev/urandom */
-                enum alouette_return rc;
-                if ((rc = random_get_seed(&_random_stream.seed)) !=
-                    ALOUETTE_RETURN_SUCCESS)
-                        return rc;
+        if (seed == NULL) {
+                /* Get a seed from the OS. */
+                _random_stream.seed = random_get_seed();
         } else {
-                _random_stream.seed = *seed_ptr;
+                _random_stream.seed = *seed;
         }
+        _random_stream.initialised = 1;
 
         /* Set the Mersenne Twister initial state. */
         _random_stream.data[0] = _random_stream.seed & 0xffffffffUL;
@@ -183,20 +180,16 @@ static enum alouette_return random_initialise(unsigned long * seed_ptr)
                 _random_stream.data[j] &= 0xffffffffUL;
         }
         _random_stream.index = MT_PERIOD;
-
-        return ALOUETTE_RETURN_SUCCESS;
-}
-
-/* Set the random seed for the built-in PRNG. */
-enum alouette_return alouette_random_seed_set(unsigned long * seed)
-{
-        message_reset();
-        return random_initialise(seed);
 }
 
 /* Uniform pseudo random distribution over (0,1) from a Mersenne Twister */
 static float random_uniform01(void)
 {
+        /* Initialise the PRNG, if not already done. */
+        if (!_random_stream.initialised) {
+                alouette_random_set(NULL);
+        }
+
         /* Check the buffer */
         if (_random_stream.index < MT_PERIOD - 1) {
                 _random_stream.index++;
@@ -256,13 +249,10 @@ void tauola_random(float * r, int * n)
         }
 }
 
-/* Status flag for the wrapper's initialisation. */
-static int _initialised = 0;
-
 /* Initialise TAUOLA and its wrapper. */
-enum alouette_return alouette_initialise(
-    unsigned long * seed, double * xk0dec)
+enum alouette_return alouette_initialise(double * xk0dec)
 {
+        static int _initialised = 0;
         message_reset();
         if (_initialised) return ALOUETTE_RETURN_SUCCESS;
 
@@ -302,30 +292,29 @@ enum alouette_return alouette_initialise(
         tauola_taupos.npb = 1;
 
         /* Initialise the built-in PRNG with an arbitrary seed for
-         * TAUOLA warmup.
+         * TAUOLA warmup. First, backup the current random state.
          */
-        unsigned long tmp = 1357894;
-        enum alouette_return rc;
-        if ((rc = random_initialise(&tmp)) != ALOUETTE_RETURN_SUCCESS)
-                return rc;
+        random_cb * random = alouette_random;
+        alouette_random = &random_uniform01;
+        struct random_stream tmp_random;
+        memcpy(&tmp_random, &_random_stream, sizeof tmp_random);
+
+        unsigned long tmp_seed = 1357894;
+        alouette_random_set(&tmp_seed);
 
         /* Initialise the decay routine. */
         double polarimeter[4];
         int state = -1;
         tauola_jaki.jak1 = 0;
         tauola_jaki.jak2 = 0;
-        random_cb * random = alouette_random; /* Use the built-in PRNG for
-                                               * TAUOLA warmup.
-                                               */
         tauola_decay(&state, polarimeter);
+
+        /* Restore the random state. */
+        memcpy(&_random_stream, &tmp_random, sizeof tmp_random);
         alouette_random = random;
 
         /* Clear the particle stack. */
         memset(&_stack, 0x0, sizeof _stack);
-
-        /* Initialise the built-in PRNG with the the user supplied seed. */
-        if ((rc = random_initialise(seed)) != ALOUETTE_RETURN_SUCCESS)
-                return rc;
 
         /* Flag as initialised and return. */
         _initialised = 1;
@@ -338,7 +327,6 @@ const char * alouette_message(void)
 {
         static const char * msg[ALOUETTE_N_RETURNS] = { "Operation succeeded",
                 "A value is out of range", "A floating point error occured",
-                "Couldn't read or write file", "No such file or directory",
                 "A Tauola error occured" };
 
         if (_message.code == ALOUETTE_RETURN_SUCCESS) {
@@ -376,14 +364,16 @@ static enum alouette_return decay(int pid, int pull)
 enum alouette_return alouette_decay(
     int pid, const double momentum[3], const double * polarisation)
 {
+        /* Initialise the library, if not already done. */
         enum alouette_return rc;
+        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
+                return rc;
 
-        /* Reset the stacks. */
-        message_reset();
+        /* Reset the stack. */
         _stack.size = 0;
         _stack.index = -1;
         if (abs(pid) != 15) {
-                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "bad pid for mother particle (%d)", pid);
         }
 
@@ -545,17 +535,19 @@ static enum alouette_return build_rotation(
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
     alouette_polarisation_cb * polarisation, double bias, double * weight)
 {
+        /* Initialise the library, if not already done. */
         enum alouette_return rc;
+        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
+                return rc;
 
-        /* Reset the stacks. */
-        message_reset();
+        /* Reset the stack. */
         _stack.size = 0;
         _stack.index = -1;
         if (abs(pid) != 16) {
-                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad pid value for daugther particle (%d)", pid);
         } else if (bias <= -1.) {
-                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad bias value (%g <= -1)", bias);
         }
 
@@ -685,13 +677,13 @@ enum alouette_return alouette_product(int * pid, double momentum[3])
                 return ALOUETTE_RETURN_SUCCESS;
         }
         _stack.size = 0;
-        return ALOUETTE_RETURN_DOMAIN_ERROR;
+        return ALOUETTE_RETURN_VALUE_ERROR;
 }
 
 /* Getter for the polarimetric vector of the last decay. */
 enum alouette_return alouette_polarimetric(double polarimetric[3])
 {
-        if (_stack.size <= 0) return ALOUETTE_RETURN_DOMAIN_ERROR;
+        if (_stack.size <= 0) return ALOUETTE_RETURN_VALUE_ERROR;
         polarimetric[0] = _stack.polarimetric[0];
         polarimetric[1] = _stack.polarimetric[1];
         polarimetric[2] = _stack.polarimetric[2];

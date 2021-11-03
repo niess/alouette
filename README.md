@@ -1,5 +1,5 @@
 # ALOUETTE
-(Y**ET** another encapsula**TE**d ta**UOLA**, backwards)
+(Y-**ET** another encapsula**TE**d TA-**UOLA**, backwards)
 
 ## Description
 
@@ -9,12 +9,6 @@ interface](http://tauolapp.web.cern.ch/tauolapp/).  The library API provides
 the following C functions:
 
 ```c
-/* Initialise TAUOLA and the ALOUETTE wrapper. */
-enum alouette_return alouette_initialise(unsigned long * seed, double * xk0dec);
-
-/* Return a string describing the last (error) message(s). */
-const char * alouette_message(enum alouette_return rc);
-
 /* Perform a forward Monte-Carlo tau decay. */
 enum alouette_return alouette_decay(
     int pid, const double momentum[3], const double * polarisation);

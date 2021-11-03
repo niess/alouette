@@ -7,13 +7,6 @@
 
 int main()
 {
-        /* Initialise the ALOUETTE library. */
-        enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL, NULL)) != ALOUETTE_RETURN_SUCCESS) {
-                fprintf(stderr, "alouette: %s\n", alouette_message());
-                exit(EXIT_FAILURE);
-        };
-
         /* Randomise a few tau decays. */
         const double polarisation[3] = { 1., 0., 0. };
         int i;
