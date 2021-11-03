@@ -46,19 +46,19 @@ enum alouette_return {
 /**
  * Initialise the wrapper and TAUOLA.
  *
- * @param mute    Flag to mute all low level messages from TAUOLA.
- * @param state   The pseudo random state vector for TAUOLA's builtin PRNG or
- *                  `NULL`.
- * @param offset  The offset to apply to the random sequence.
+ * @param seed    Seed for the builtin PRNG or `NULL`.
+ * @param xk0dec  Factor for radiative corrections or `NULL`.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
- * Initialise the TAUOLA++ library. Call this function prior to any other
- * wrapper's routine. If *mute* is not zero all messages from TAUOLA are
- * redirected to /dev/null.
+ * Initialise the TAUOLA library and its wrapper. Call this function prior to
+ * any other library function.
  *
- * __Note__ : if *state* is `ǸULL` the pseudo random engine is initialised from
- * /dev/urandom.
+ * __Note__ : if *seed* is `NULL`, then the pseudo random engine is initialised
+ * using the OS entropy, i.e. /dev/urandom.
+ *
+ * __Note__ : if *xk0dec* is `NULL`, then a default value of 1E-03 is used,
+ * following Jezabek et al., CPC 70 (1992) 69-76.
  *
  * __Error codes__
  *
@@ -68,19 +68,8 @@ enum alouette_return {
  *
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
-enum alouette_return alouette_initialise(int mute, unsigned int state[3]);
-
-/**
- * Finalise the wrapper.
- *
- * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
- * code is returned as detailed below.
- *
- * __Error codes__
- *
- *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
- */
-enum alouette_return alouette_finalise(void);
+enum alouette_return alouette_initialise(
+    unsigned long * seed, double * xk0dec);
 
 /**
  * Return a string describing an `alouette_return` code.
@@ -196,11 +185,33 @@ enum alouette_return alouette_product(int * pid, double momentum[3]);
 enum alouette_return alouette_polarimetric(double polarimetric[3]);
 
 /**
- * Get TAUOLA's builtin random state.
+ * Get the random seed for the built-in PRNG.
  *
- * @param state    The state vector to fill.
+ * @return The current random seed.
+ *
+ * Call this routine after `alouette_initialise` in order to retrieve the random
+ * seed of the built-in PRNG.
  */
-void alouette_random_state(unsigned int state[3]);
+unsigned long alouette_seed_get(void);
+
+/**
+ * Set the random seed for the built-in PRNG.
+ *
+ * @param seed    The random seed or `NULL`.
+ * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
+ * code is returned as detailed below.
+ *
+ * Reset the built-in PRNG with a new random *seed*. If *seed* is `NULL`, then
+ * the pseudo random engine is initialised using the OS entropy, i.e.
+ * /dev/urandom.
+ *
+ * __Error codes__
+ *
+ *     ALOUETTE_RETURN_IO_ERROR        Couldn't read from /dev/urandom.
+ *
+ *     ALOUETE_RETURN_PATH_ERROR       Couldn't open /dev/urandom.
+ */
+enum alouette_return alouette_seed_set(unsigned long * seed);
 
 #ifdef __cplusplus
 }

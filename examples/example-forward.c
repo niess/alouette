@@ -9,7 +9,7 @@ int main()
 {
         /* Initialise the ALOUETTE library. */
         enum alouette_return rc;
-        if ((rc = alouette_initialise(1, NULL)) != ALOUETTE_RETURN_SUCCESS) {
+        if ((rc = alouette_initialise(NULL, NULL)) != ALOUETTE_RETURN_SUCCESS) {
                 fprintf(stderr, "alouette: %s\n", alouette_strerror(rc));
                 exit(EXIT_FAILURE);
         };
@@ -31,12 +31,6 @@ int main()
                             momentum[0], momentum[1], momentum[2]);
                 }
         }
-
-        /* Finalise the library. */
-        if ((rc = alouette_finalise()) != ALOUETTE_RETURN_SUCCESS) {
-                fprintf(stderr, "alouette: %s\n", alouette_strerror(rc));
-                exit(EXIT_FAILURE);
-        };
 
         return 0;
 }

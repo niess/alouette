@@ -36,196 +36,244 @@
 
 /* Stack for TAUOLA's decay products. */
 static struct {
-#define STACK_MAX_DEPTH 16
-        int length, index;
-        int pid[STACK_MAX_DEPTH];
+#define STACK_MAX_SIZE 16
+        int size, index;
+        int pid[STACK_MAX_SIZE];
         double polarimetric[4];
-        double p[4 * STACK_MAX_DEPTH];
-} stack = { 0, -1 };
+        double p[4 * STACK_MAX_SIZE];
+} _stack = { 0, -1 };
+
+/* Some TAUOLA common blocks and routine(s) */
+extern struct {
+    int jak1, jak2, jakp, jakm, ktom;
+} tauola_jaki;
+
+extern struct {
+    float amtau, amnuta, amel, amnue, ammu, amnumu, ampiz, ampi, amro, gamro,
+          ama1, gama1, amk, amkz, amkst, gamkst;
+} tauola_parmas;
+
+extern void tauola_decay(int * state, double polarimeter[4]);
 
 /* Jump buffer for calling back from a TAUOLA error. */
-static jmp_buf jump_buffer;
+static jmp_buf _jump_buffer;
 
 /* Jump back to the calling context from within TAUOLA, instead of issuing
  * a hard stop.
  */
-void softstp_() { longjmp(jump_buffer, 1); }
-
-/* TAUOLA's common block for particle masses. */
-extern struct {
-        float amtau, amnuta, amell, amnue, ammu, amnumu, ampiz, ampi, amro,
-            gamro, ama1, gama1, amk, amkz, amkst, gamkst;
-} parmas_;
-
-/* TAUOLA's main decay routine. */
-extern void dekay_(int * state, double polarimetric[4]);
-
-/* Initialisation of TAUOLA's engine. */
-static enum alouette_return tauola_initialise(
-    char * tauola_log, unsigned int state[3])
+void tauola_stop(void)
 {
-        /* Register a rally point in case of a TAUOLA error. */
-        if (setjmp(jump_buffer) != 0) return ALOUETTE_RETURN_TAULOA_ERROR;
-
-        if (tauola_log != NULL) {
-                /* Redirect the output messages from TAUOLA. */
-                extern void openout_(
-                    int *, char *, int); /* TODO: check success. */
-                int iout = 17;
-                openout_(&iout, tauola_log, strlen(tauola_log));
-        }
-
-        /* Configure the common block for selecting the decay modes. */
-        extern struct {
-                int jak1, jak2, jakp, jakm, ktom;
-        } jaki_;
-        jaki_.jak1 = 0;
-        jaki_.jak2 = 0;
-
-        /* Unknown common block. */
-        extern struct {
-                double xk0dec;
-                int itdkrc;
-        } taurad_;
-        taurad_.itdkrc = 1;
-        taurad_.xk0dec = 0.001;
-
-        /* Configure the common block with tau PDG ID. */
-        extern struct {
-                int idff;
-        } idfc_;
-        idfc_.idff = 15;
-
-        /* Initialise masses. */
-        extern void inimas_();
-        inimas_();
-
-        /* Initialise decay parameters? */
-        extern void initdk_();
-        initdk_();
-
-        /* Initialise Physics? */
-        extern void iniphy_(float * i);
-        float iniphy_parameter = 0.1;
-        iniphy_(&iniphy_parameter);
-
-        /* Initialise the decay generator. */
-        int dekay_state = -1;
-        double polarimetric[4];
-        dekay_(&dekay_state, polarimetric);
-
-        /* Set the seed for the random engine. */
-        extern void rmarin_(
-            unsigned int * ijkl, unsigned int * ntot, unsigned int * ntot2);
-        state[0] = state[0] % 900000001;
-        state[1] = state[1] % 1000000000;
-        state[2] = state[2] % 1000000000;
-        rmarin_(state, state + 1, state + 2);
-
-        return ALOUETTE_RETURN_SUCCESS;
+        longjmp(_jump_buffer, 1);
 }
 
-/* Finalise TAUOLA's engine. */
-static enum alouette_return tauola_finalise()
+/* XXX Redirect TAUOLA printing. */
+void tauola_print(const char * message)
 {
-        /* Register a rally in case of a TAUOLA error. */
-        if (setjmp(jump_buffer) != 0) return ALOUETTE_RETURN_TAULOA_ERROR;
-
-        /* Dump a summary info. */
-        int state = 100;
-        double polarimetric[4];
-        dekay_(&state, polarimetric);
-
-        /* Close any file redirection. */
-        extern void closout_();
-        closout_();
-
-        return ALOUETTE_RETURN_SUCCESS;
-}
-
-/* Low level decay routine with TAUOLA. */
-static enum alouette_return tauola_decay(int pid, int pull)
-{
-        /* Register a rally in case of a TAUOLA error. */
-        if (setjmp(jump_buffer) != 0) return ALOUETTE_RETURN_TAULOA_ERROR;
-
-        /* Configure the positions of taus in the LUND common block */
-        extern struct {
-                int npa, npb;
-        } taupos_;
-        taupos_.npa = 1;
-        taupos_.npb = 1;
-
-        /* Call TAUOLA's decay routine. */
-        int type = (pid > 0) ? 1 : 2;
-        type += 10 * (pull != 0);
-        dekay_(&type, stack.polarimetric);
-
-        return ALOUETTE_RETURN_SUCCESS;
+        const int n = strlen(message);
+        printf("[%4d] %s\n", n, message);
 }
 
 /* Callback for TAUOLA, used for retrieving decay products. */
-void filhep_(int * n, int * status, int * pid, int * mother_first,
+void tauola_filhep(int * n, int * status, int * pid, int * mother_first,
     int * mother_last, int * daughter_first, int * daughter_last, float p4[4],
     float * p_inv_mass, int * photos_flag)
 {
-        if (*status != 1) return;
+        if ((*status != 1) || (_stack.size >= STACK_MAX_SIZE))
+                return;
+
         const int aid = abs(*pid);
         if ((aid == 24) || (aid == 313) || (aid == 323) || (aid > 9999)) return;
-        stack.pid[stack.length] = *pid;
-        double * const P = stack.p + 4 * stack.length;
+        _stack.pid[_stack.size] = *pid;
+        double * const P = _stack.p + 4 * _stack.size;
         P[0] = (double)p4[0];
         P[1] = (double)p4[1];
         P[2] = (double)p4[2];
         P[3] = (double)p4[3];
-        stack.length++;
+        _stack.size++;
 }
 
-/* Callback for TAUOLA, not needed since all decays are in the center of mass
- * frame.
- */
-void tralo4_(float * kto, float p[4], float q[4], float * ams) {}
+/* Data structure for the built-in MT pseudo random engine. */
+#define MT_PERIOD 624
+static struct {
+        unsigned long seed;
+        int index;
+        unsigned long data[MT_PERIOD];
+} _random_stream;
 
-/* Status flag for the wrapper's initialisation. */
-static int initialised = 0;
-
-/* Initialise TAUOLA and its wrapper. */
-enum alouette_return alouette_initialise(int mute, unsigned int state[3])
+/* Get the random seed for the built-in PRNG. */
+unsigned long alouette_seed_get(void)
 {
-        if (initialised) return ALOUETTE_RETURN_SUCCESS;
+        return _random_stream.seed;
+}
 
-        /* Set the seed for the random engine. */
-        unsigned int state_[3] = { 0, 0, 0 };
-        if (state == NULL) {
-                state = state_;
-                FILE * stream = fopen("/dev/urandom", "rb");
-                if (stream != NULL) {
-                        if (fread(&state_, sizeof(*state_), 1, stream) <= 0) {
-                                fclose(stream);
-                                return ALOUETTE_RETURN_IO_ERROR;
-                        }
-                        fclose(stream);
-                } else
-                        return ALOUETTE_RETURN_PATH_ERROR;
+/* Get a random seed from /dev/urandom */
+static enum alouette_return random_get_seed(unsigned long * seed)
+{
+        FILE * fp = fopen("/dev/urandom", "rb");
+        if (fp == NULL) return ALOUETTE_RETURN_PATH_ERROR;
+        if (fread(seed, sizeof(long), 1, fp) <= 0) {
+                fclose(fp);
+                return ALOUETTE_RETURN_IO_ERROR;
         }
-
-        /* Initialise TAUOLA's library. */
-        char * tauola_log = (mute != 0) ? "/dev/null" : NULL;
-        enum alouette_return rc;
-        if ((rc = tauola_initialise(tauola_log, state)) !=
-            ALOUETTE_RETURN_SUCCESS)
-                return rc;
-        initialised = 1;
+        fclose(fp);
         return ALOUETTE_RETURN_SUCCESS;
 }
 
-/* Finalise TAUOLA and its wrapper. */
-enum alouette_return alouette_finalise(void)
+/* Set the random seed for the built-in PRNG. */
+enum alouette_return alouette_seed_set(unsigned long * seed_ptr)
 {
-        if (!initialised) return ALOUETTE_RETURN_SUCCESS;
+        if (seed_ptr == NULL) {
+                /* Get a seed from /dev/urandom */
+                enum alouette_return rc;
+                if ((rc = random_get_seed(&_random_stream.seed)) !=
+                    ALOUETTE_RETURN_SUCCESS)
+                        return rc;
+        } else {
+                _random_stream.seed = *seed_ptr;
+        }
+
+        /* Set the Mersenne Twister initial state. */
+        _random_stream.data[0] = _random_stream.seed & 0xffffffffUL;
+        int j;
+        for (j = 1; j < MT_PERIOD; j++) {
+                _random_stream.data[j] = (1812433253UL *
+                        (_random_stream.data[j - 1] ^
+                            (_random_stream.data[j - 1] >> 30)) +
+                    j);
+                _random_stream.data[j] &= 0xffffffffUL;
+        }
+        _random_stream.index = MT_PERIOD;
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
+/* Uniform pseudo random distribution over (0,1) from a Mersenne Twister */
+static float random_uniform01(void)
+{
+        /* Check the buffer */
+        if (_random_stream.index < MT_PERIOD - 1) {
+                _random_stream.index++;
+        } else {
+                /* Update the MT state */
+                const int M = 397;
+                const unsigned long UPPER_MASK = 0x80000000UL;
+                const unsigned long LOWER_MASK = 0x7fffffffUL;
+                static unsigned long mag01[2] = { 0x0UL, 0x9908b0dfUL };
+                unsigned long y;
+                int kk;
+                for (kk = 0; kk < MT_PERIOD - M; kk++) {
+                        y = (_random_stream.data[kk] & UPPER_MASK) |
+                            (_random_stream.data[kk + 1] & LOWER_MASK);
+                        _random_stream.data[kk] =
+                            _random_stream.data[kk + M] ^ (y >> 1) ^
+                            mag01[y & 0x1UL];
+                }
+                for (; kk < MT_PERIOD - 1; kk++) {
+                        y = (_random_stream.data[kk] & UPPER_MASK) |
+                            (_random_stream.data[kk + 1] & LOWER_MASK);
+                        _random_stream.data[kk] =
+                            _random_stream.data[kk + (M - MT_PERIOD)] ^
+                            (y >> 1) ^ mag01[y & 0x1UL];
+                }
+                y = (_random_stream.data[MT_PERIOD - 1] & UPPER_MASK) |
+                    (_random_stream.data[0] & LOWER_MASK);
+                _random_stream.data[MT_PERIOD - 1] =
+                    _random_stream.data[M - 1] ^ (y >> 1) ^
+                    mag01[y & 0x1UL];
+                _random_stream.index = 0;
+        }
+
+        /* Tempering */
+        unsigned long y = _random_stream.data[_random_stream.index];
+        y ^= (y >> 11);
+        y ^= (y << 7) & 0x9d2c5680UL;
+        y ^= (y << 15) & 0xefc60000UL;
+        y ^= (y >> 18);
+
+        /* Convert to a 32 bits floating point in (0,1) */
+        const double u = (((double)y) + 0.5) * (1.0 / 4294967296.0);
+
+        return (float)u;
+}
+
+/* Random stream wrapper for TAUOLA */
+void tauola_random(float * r, int * n)
+{
+        int i;
+        for (i = 0; i < *n; i++) {
+                r[i] = random_uniform01();
+        }
+}
+
+/* Status flag for the wrapper's initialisation. */
+static int _initialised = 0;
+
+/* Initialise TAUOLA and its wrapper. */
+enum alouette_return alouette_initialise(
+    unsigned long * seed, double * xk0dec)
+{
+        if (_initialised) return ALOUETTE_RETURN_SUCCESS;
+
+        /* Rally point in case of a TAUOLA error. */
+        if (setjmp(_jump_buffer) != 0) { /* XXX customise error message */
+                return ALOUETTE_RETURN_TAULOA_ERROR;
+        }
+
+        /* TAUOLA common blocks and routines. */
+        extern struct { int idff; } tauola_idfc;
+        extern struct { double xk0dec; int itdkrc; } tauola_taurad;
+
+        /* Parse settings and configure. */
+        if (xk0dec == NULL) {
+                /* Cut parameter for radiative corrections in leptonic
+                 * decays. Set default value according to Jezabek et al.,
+                 * CPC 70 (1992) 69-76.
+                 */
+                tauola_taurad.itdkrc = 1;
+                tauola_taurad.xk0dec = 0.001;
+        } else if (*xk0dec > 0.) {
+                tauola_taurad.itdkrc = 1;
+                tauola_taurad.xk0dec = *xk0dec;
+        } else {
+                tauola_taurad.itdkrc = 0;
+                tauola_taurad.xk0dec = 0.;
+        }
+
+        /* PDG identifier for tau. */
+        tauola_idfc.idff = 15;
+
+        /* Configure the positions of taus in TAUOLA's stack. */
+        extern struct {
+                int npa, npb;
+        } tauola_taupos;
+        tauola_taupos.npa = 1;
+        tauola_taupos.npb = 1;
+
+        /* Initialise the builtin random engine with an arbitrary seed for
+         * TAUOLA warmup.
+         */
+        unsigned long tmp = 1357894;
         enum alouette_return rc;
-        if ((rc = tauola_finalise()) != ALOUETTE_RETURN_SUCCESS) return rc;
-        initialised = 0;
+        if ((rc = alouette_seed_set(&tmp)) != ALOUETTE_RETURN_SUCCESS)
+                return rc;
+
+        /* Initialise the decay routine. */
+        double polarimeter[4];
+        int state = -1;
+        tauola_jaki.jak1 = 0;
+        tauola_jaki.jak2 = 0;
+        tauola_decay(&state, polarimeter);
+
+        /* Clear the particle stack. */
+        memset(&_stack, 0x0, sizeof _stack);
+
+        /* Initialise the random engine with the the user supplied seed. */
+        if ((rc = alouette_seed_set(seed)) != ALOUETTE_RETURN_SUCCESS)
+                return rc;
+
+        /* Flag as initialised and return. */
+        _initialised = 1;
+
         return ALOUETTE_RETURN_SUCCESS;
 }
 
@@ -243,11 +291,20 @@ const char * alouette_strerror(enum alouette_return rc)
                 return msg[rc];
 }
 
-/* Uniform PRN over [0,1]. */
-static double uniform01(void)
+/* Low level decay routine with TAUOLA. */
+static enum alouette_return decay(int pid, int pull)
 {
-        /* TODO: uniformise the PRN streams. */
-        return rand() / (double)(RAND_MAX);
+        /* Register a rally in case of a TAUOLA error. */
+        if (setjmp(_jump_buffer) != 0) return ALOUETTE_RETURN_TAULOA_ERROR;
+
+        /* XXX Allow to select the decay mode. */
+
+        /* Call TAUOLA's decay routine. */
+        int type = (pid > 0) ? 1 : 2;
+        type += 10 * (pull != 0);
+        tauola_decay(&type, _stack.polarimetric);
+
+        return ALOUETTE_RETURN_SUCCESS;
 }
 
 /* Decay a tau with TAUOLA. */
@@ -257,42 +314,43 @@ enum alouette_return alouette_decay(
         enum alouette_return rc;
 
         /* Reset the stack. */
-        stack.length = 0;
-        stack.index = -1;
+        _stack.size = 0;
+        _stack.index = -1;
         if (abs(pid) != 15) return ALOUETTE_RETURN_DOMAIN_ERROR;
 
         /* Decay a tau in its rest frame. */
         for (;;) {
-                if ((rc = tauola_decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
+                /* XXX Rotate instead of re-decaying */
+                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (polarisation == NULL) break;
                 const double w =
-                    0.5 * (1. + stack.polarimetric[0] * polarisation[0] +
-                              stack.polarimetric[1] * polarisation[1] +
-                              stack.polarimetric[2] * polarisation[2]);
-                if (uniform01() <= w) break;
-                stack.length = 0;
+                    0.5 * (1. + _stack.polarimetric[0] * polarisation[0] +
+                              _stack.polarimetric[1] * polarisation[1] +
+                              _stack.polarimetric[2] * polarisation[2]);
+                if (random_uniform01() <= w) break;
         }
-        if ((rc = tauola_decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
+        if ((rc = decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
 
         /* Check the result. */
-        if (isinf(stack.p[0])) {
-                stack.length = 0;
+        if (isinf(_stack.p[0])) {
+                _stack.size = 0;
                 return ALOUETTE_RETURN_FLOATING_ERROR;
         }
 
         /* Boost the daughters to the lab frame. */
-        const double tau[3] = { momentum[0] / parmas_.amtau,
-                momentum[1] / parmas_.amtau, momentum[2] / parmas_.amtau };
+        const double amtau = tauola_parmas.amtau;
+        const double tau[3] = { momentum[0] / amtau,
+                momentum[1] / amtau, momentum[2] / amtau };
         const double gamma =
             sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
-        stack.index = 0;
+        _stack.index = 0;
         rc = ALOUETTE_RETURN_SUCCESS;
         if (gamma <= 1. + FLT_EPSILON) return rc;
 
         int i;
         double * P;
-        for (i = 0, P = stack.p; i < stack.length; i++, P += 4) {
+        for (i = 0, P = _stack.p; i < _stack.size; i++, P += 4) {
                 /* Apply the boost. */
                 const double ptau =
                     P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
@@ -361,7 +419,7 @@ static enum alouette_return rotate_direction(
         const double u1z = u0x * direction[1] - u0y * direction[0];
 
         /* Apply the rotation. */
-        const double phi = M_PI * (1. - 2. * uniform01());
+        const double phi = M_PI * (1. - 2. * random_uniform01());
         const double cp = cos(phi);
         const double sp = sin(phi);
         direction[0] = cos_theta * direction[0] + st * (cp * u0x + sp * u1x);
@@ -413,26 +471,26 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         enum alouette_return rc;
 
         /* Reset the stack. */
-        stack.length = 0;
-        stack.index = -1;
+        _stack.size = 0;
+        _stack.index = -1;
         if ((abs(pid) != 16) || (bias <= -1.))
                 return ALOUETTE_RETURN_DOMAIN_ERROR;
 
         /* Decay an unpolarised tau in its rest frame. */
-        if ((rc = tauola_decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS) return rc;
-        if ((rc = tauola_decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
+        if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS) return rc;
+        if ((rc = decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
 
         /* Check the result. */
-        if (isinf(stack.p[0])) {
-                stack.length = 0;
+        if (isinf(_stack.p[0])) {
+                _stack.size = 0;
                 return ALOUETTE_RETURN_FLOATING_ERROR;
         }
 
         /* Get the daughter's index. */
         int i = 0;
         double * pi;
-        for (i = 0, pi = stack.p; i < stack.length; i++, pi += 4)
-                if (stack.pid[i] == pid) break;
+        for (i = 0, pi = _stack.p; i < _stack.size; i++, pi += 4)
+                if (_stack.pid[i] == pid) break;
 
         /* Re-draw the daughter's direction in the mother's rest frame using
          * a biased distribution, towards the daughter's direction in the
@@ -447,7 +505,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
                 /* Draw the new direction. */
                 double u[3] = { momentum[0] / energy, momentum[1] / energy,
                         momentum[2] / energy };
-                const double r = uniform01();
+                const double r = random_uniform01();
                 const double cos_theta = 2. * pow(r, 1. / (bias + 1.)) - 1.;
                 if ((rotate_direction(cos_theta, u) ==
                         ALOUETTE_RETURN_SUCCESS) &&
@@ -456,7 +514,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
                         /* Update the generated state and the BMC weight. */
                         R = R_storage;
                         mv_multiply(R, pi);
-                        mv_multiply(R, stack.polarimetric);
+                        mv_multiply(R, _stack.polarimetric);
                         *weight = 0.5 * (cos_theta + 1.) / ((bias + 1.) * r);
                 }
         }
@@ -474,7 +532,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         double Et = 0., Pt[3] = { 0., 0., 0. };
         int j;
         double * pj;
-        for (j = 0, pj = stack.p; j < stack.length; j++, pj += 4) {
+        for (j = 0, pj = _stack.p; j < _stack.size; j++, pj += 4) {
                 if (j == i) {
                         /* Update with the provided daughter data. */
                         Et += energy;
@@ -502,64 +560,56 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         }
 
         /* Set the backward Monte-Carlo weight. */
-        *weight *= parmas_.amtau * parmas_.amtau * parmas_.amtau *
-            fabs(t0 * t0 * gamma / energy);
+        const double amtau = tauola_parmas.amtau;
+        *weight *= amtau * amtau * amtau * fabs(t0 * t0 * gamma / energy);
 
         /* Weight for the spin polarisation of the tau mother. */
         const int tau_pid = pid > 0 ? 15 : -15;
         if (polarisation != NULL) {
                 double pol[3];
                 polarisation(tau_pid, Pt, pol);
-                *weight *= 1. + stack.polarimetric[0] * pol[0] +
-                    stack.polarimetric[1] * pol[1] +
-                    stack.polarimetric[2] * pol[2];
+                *weight *= 1. + _stack.polarimetric[0] * pol[0] +
+                    _stack.polarimetric[1] * pol[1] +
+                    _stack.polarimetric[2] * pol[2];
         }
 
         /* Replace the daughter particle with the tau mother. In order to
          * ensure the conservation of the energy-momentum, the mother's 4
          * momentum has been computed from the boosted products.
          */
-        stack.pid[i] = tau_pid;
+        _stack.pid[i] = tau_pid;
         pi[0] = Pt[0];
         pi[1] = Pt[1];
         pi[2] = Pt[2];
         pi[3] = Et;
 
         /* Set the stack index and return. */
-        stack.index = 0;
+        _stack.index = 0;
         return ALOUETTE_RETURN_SUCCESS;
 }
 
 /* Iterator over the tau decay products. */
 enum alouette_return alouette_product(int * pid, double momentum[3])
 {
-        if ((stack.length <= 0) || (stack.index < 0)) return 0;
-        if (stack.index < stack.length) {
-                double * p = stack.p + 4 * stack.index;
-                *pid = stack.pid[stack.index++];
+        if ((_stack.size <= 0) || (_stack.index < 0)) return 0;
+        if (_stack.index < _stack.size) {
+                double * p = _stack.p + 4 * _stack.index;
+                *pid = _stack.pid[_stack.index++];
                 momentum[0] = p[0];
                 momentum[1] = p[1];
                 momentum[2] = p[2];
                 return ALOUETTE_RETURN_SUCCESS;
         }
-        stack.length = 0;
+        _stack.size = 0;
         return ALOUETTE_RETURN_DOMAIN_ERROR;
 }
 
 /* Getter for the polarimetric vector of the last decay. */
 enum alouette_return alouette_polarimetric(double polarimetric[3])
 {
-        if (stack.length <= 0) return ALOUETTE_RETURN_DOMAIN_ERROR;
-        polarimetric[0] = stack.polarimetric[0];
-        polarimetric[1] = stack.polarimetric[1];
-        polarimetric[2] = stack.polarimetric[2];
+        if (_stack.size <= 0) return ALOUETTE_RETURN_DOMAIN_ERROR;
+        polarimetric[0] = _stack.polarimetric[0];
+        polarimetric[1] = _stack.polarimetric[1];
+        polarimetric[2] = _stack.polarimetric[2];
         return ALOUETTE_RETURN_SUCCESS;
-}
-
-/* Get TAUOLA's builtin random state. */
-void alouette_random_state(unsigned int state[3])
-{
-        extern void rmarut_(
-            unsigned int * ijkl, unsigned int * ntot, unsigned int * ntot2);
-        rmarut_(state, state + 1, state + 2);
 }

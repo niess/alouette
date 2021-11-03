@@ -1,41 +1,97 @@
-CFLAGS := -O2 -std=c99 -pedantic -Wall
-FFLAGS := -O2 -fno-second-underscore -fno-backslash -fno-automatic -ffixed-line-length-132
+PYTHON=  python3
+LIB=     libalouette.so
 
-RCHLCURRENTS  = new-currents/RChL-currents
-OTHERCURRENTS = new-currents/other-currents
-TAUOLA_OBJS =  $(addprefix src/tauola/, \
-	formf.o tauola.o curr_cleo.o pkorb.o f3pi.o tauola_extras.o \
-	$(RCHLCURRENTS)/rcht_3pi/f3pi_rcht.o \
-	$(RCHLCURRENTS)/rcht_3pi/funct_3pi.o \
-	$(RCHLCURRENTS)/rcht_common/funct_rpt.o \
-	$(RCHLCURRENTS)/rcht_common/value_parameter.o \
-	$(RCHLCURRENTS)/rcht_common/FA1RCHL.o \
-	$(RCHLCURRENTS)/rcht_common/ffwid3pi.o \
-	$(RCHLCURRENTS)/rcht_common/initA1TabKKpi.o \
-	$(RCHLCURRENTS)/rcht_common/wid_a1_fit.o \
-	$(RCHLCURRENTS)/rcht_common/initA1Tab.o \
-	$(RCHLCURRENTS)/rcht_common/wid_a1_fitKKpi.o  \
-	$(RCHLCURRENTS)/rcht_common/gaus_integr.o \
-	$(RCHLCURRENTS)/rcht_common/gfact.o \
-	$(OTHERCURRENTS)/frho_pi_belle.o)
+BUILD_DIR= build
 
-.PHONY: lib examples clean
+CC=     gcc
+LD=     $(CC) -shared
+CFLAGS= -g -O3 -Wall
+SHARED= -fPIC
 
-lib: lib/libalouette.so
-	@rm -f *.o $(TAUOLA_OBJS)
+
+.PHONY: lib
+lib: lib/$(LIB)
+
+
+# Bundle TAUOLA
+TAUOLAPP_VERSION= 1.1.8
+TAUOLAPP_TARBALL= TAUOLA.$(TAUOLAPP_VERSION)-LHC.tar.gz
+
+TAUOLA_DIR=      src/TAUOLA
+TAUOLA_F_DIR=    $(TAUOLA_DIR)/tauola-fortran/tauola-modified
+TAUOLA_I_DIR=    $(TAUOLA_DIR)/src/tauolaFortranInterfaces
+TAUOLA_INCLUDES= $(TAUOLA_F_DIR)/new-currents/RChL-currents/funct_declar.inc \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/parameter.inc
+TAUOLA_SOURCES=  $(TAUOLA_F_DIR)/curr_cleo.f \
+                 $(TAUOLA_F_DIR)/formf.f \
+                 $(TAUOLA_F_DIR)/tauola.f \
+                 $(TAUOLA_F_DIR)/f3pi.f \
+                 $(TAUOLA_F_DIR)/pkorb.f \
+                 $(TAUOLA_F_DIR)/new-currents/other-currents/frho_pi_belle.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_3pi/f3pi_rcht.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_3pi/funct_3pi.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/FA1RCHL.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/ffwid3pi.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/funct_rpt.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/gaus_integr.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/gfact.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/initA1Tab.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/initA1TabKKpi.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/value_parameter.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/wid_a1_fit.f \
+                 $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/wid_a1_fitKKpi.f \
+                 $(TAUOLA_I_DIR)/tauola_extras.f
+TAUOLA_OBJS=     $(BUILD_DIR)/tauola.o
+TAUOLA_FFLAGS=   -fno-automatic -fno-backslash -ffixed-line-length-132 \
+                 -J$(BUILD_DIR)
+
+$(BUILD_DIR)/tauola.o: src/tauola.f | build
+	$(CC) -o $@ $(TAUOLA_FFLAGS) $(SHARED) -c $<
+
+src/tauola.f: src/wrap-tauola.py
+	$(PYTHON) $< -s $(TAUOLA_SOURCES) -i $(TAUOLA_INCLUDES) -w $@
+
+$(TAUOLA_DIR):
+	cd src && \
+	wget https://tauolapp.web.cern.ch/tauolapp/resources/TAUOLA.$(TAUOLAPP_VERSION)/$(TAUOLAPP_TARBALL) && \
+	tar -xf $(TAUOLAPP_TARBALL) && \
+	rm -f $(TAUOLAPP_TARBALL)
+
+
+# Build Alouette
+ALOUETTE_INCLUDES= include/alouette.h
+ALOUETTE_OBJS=     $(BUILD_DIR)/alouette.o
+
+$(BUILD_DIR)/alouette.o: src/alouette.c $(ALOUETTE_INCLUDES) | build
+	$(CC) -o $@ $(CFLAGS) $(SHARED) -Iinclude -c $<
+
+
+lib/$(LIB): $(ALOUETTE_OBJS) $(TAUOLA_OBJS) | libdir
+	$(LD) -o $@ $^ -lm
+
+
+# Build examples
+EXAMPLES_CFLAGS= $(CFLAGS) -Iinclude -Llib -Wl,-rpath $(PWD)/lib
+EXAMPLES_LDFLAGS= -lalouette -lm
 
 examples: bin/example-forward bin/example-backward
 
-clean:
-	@rm -rf bin lib *.o $(TAUOLA_OBJS)
+bin/example-%: examples/example-%.c lib | bin
+	$(CC) -o $@ $(EXAMPLES_CFLAGS) $< $(EXAMPLES_LDFLAGS)
 
-lib/lib%.so: src/%.c include/%.h $(TAUOLA_OBJS)
-	@mkdir -p lib
-	@gcc -o $@ $(CFLAGS) -fPIC -Iinclude -shared $< $(TAUOLA_OBJS) -lm -lgfortran
 
-src/tauola/%.o: src/tauola/%.f
-	@gfortran -o $@ $(FFLAGS) -fPIC -c $<
-
-bin/example-%: examples/example-%.c lib
+.PHONY: bin
+bin:
 	@mkdir -p bin
-	@gcc -o $@ $(CFLAGS) -Iinclude $< -Llib -lalouette -lm
+
+.PHONY: build
+build:
+	@mkdir -p build
+
+.PHONY: libdir
+libdir:
+	@mkdir -p lib
+
+.PHONY: clean
+clean:
+	rm -rf bin build lib
