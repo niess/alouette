@@ -22,6 +22,7 @@
 #include <float.h>
 #include <math.h>
 #include <setjmp.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,6 +43,14 @@ static struct {
         double polarimetric[4];
         double p[4 * STACK_MAX_SIZE];
 } _stack = { 0, -1 };
+
+/* Stack for message(s) */
+static struct {
+#define MESSAGE_MAX_SIZE 1024
+        int size;
+        enum alouette_return code;
+        char data[];
+} _message = {0, ALOUETTE_RETURN_SUCCESS, {0x0}};
 
 /* Some TAUOLA common blocks and routine(s) */
 extern struct {
@@ -66,11 +75,12 @@ void tauola_stop(void)
         longjmp(_jump_buffer, 1);
 }
 
-/* XXX Redirect TAUOLA printing. */
-void tauola_print(const char * message)
+/* Redirect TAUOLA printing to the message stack. */
+void tauola_print(const char * msg)
 {
-        const int n = strlen(message);
-        printf("[%4d] %s\n", n, message);
+        const char * prefix = (_message.size > 0) ? "\n" : "";
+        _message.size += snprintf(_message.data + _message.size,
+            MESSAGE_MAX_SIZE - _message.size - 1, "%s%s", prefix, msg);
 }
 
 /* Callback for TAUOLA, used for retrieving decay products. */
@@ -92,6 +102,31 @@ void tauola_filhep(int * n, int * status, int * pid, int * mother_first,
         _stack.size++;
 }
 
+/* Utility function for reseting the message stack. */
+static void message_reset(void)
+{
+        _message.size = 0;
+        _message.code = ALOUETTE_RETURN_SUCCESS;
+        _message.data[0] = 0x0;
+}
+
+/* Utility function for dumping an error to the message stack. */
+static enum alouette_return message_error(
+    enum alouette_return code, const char * fmt, ...)
+{
+        _message.code = code;
+
+        if (fmt != NULL) {
+                va_list args;
+                va_start(args, fmt);
+                _message.size += vsnprintf(_message.data,
+                    MESSAGE_MAX_SIZE - 1 - _message.size, fmt, args);
+                va_end(args);
+        }
+
+        return code;
+}
+
 /* Data structure for the built-in MT pseudo random engine. */
 #define MT_PERIOD 624
 static struct {
@@ -109,18 +144,23 @@ unsigned long alouette_seed_get(void)
 /* Get a random seed from /dev/urandom */
 static enum alouette_return random_get_seed(unsigned long * seed)
 {
-        FILE * fp = fopen("/dev/urandom", "rb");
-        if (fp == NULL) return ALOUETTE_RETURN_PATH_ERROR;
+        const char * urandom = "/dev/urandom";
+        FILE * fp = fopen(urandom, "rb");
+        if (fp == NULL) {
+                return message_error(ALOUETTE_RETURN_PATH_ERROR,
+                    "could not open %s", urandom);
+        }
         if (fread(seed, sizeof(long), 1, fp) <= 0) {
                 fclose(fp);
-                return ALOUETTE_RETURN_IO_ERROR;
+                return message_error(ALOUETTE_RETURN_IO_ERROR,
+                    "could not read from %s", urandom);
         }
         fclose(fp);
         return ALOUETTE_RETURN_SUCCESS;
 }
 
-/* Set the random seed for the built-in PRNG. */
-enum alouette_return alouette_seed_set(unsigned long * seed_ptr)
+/* Initialise the built-in PRNG. */
+static enum alouette_return random_initialise(unsigned long * seed_ptr)
 {
         if (seed_ptr == NULL) {
                 /* Get a seed from /dev/urandom */
@@ -145,6 +185,13 @@ enum alouette_return alouette_seed_set(unsigned long * seed_ptr)
         _random_stream.index = MT_PERIOD;
 
         return ALOUETTE_RETURN_SUCCESS;
+}
+
+/* Set the random seed for the built-in PRNG. */
+enum alouette_return alouette_seed_set(unsigned long * seed)
+{
+        message_reset();
+        return random_initialise(seed);
 }
 
 /* Uniform pseudo random distribution over (0,1) from a Mersenne Twister */
@@ -212,11 +259,12 @@ static int _initialised = 0;
 enum alouette_return alouette_initialise(
     unsigned long * seed, double * xk0dec)
 {
+        message_reset();
         if (_initialised) return ALOUETTE_RETURN_SUCCESS;
 
         /* Rally point in case of a TAUOLA error. */
-        if (setjmp(_jump_buffer) != 0) { /* XXX customise error message */
-                return ALOUETTE_RETURN_TAULOA_ERROR;
+        if (setjmp(_jump_buffer) != 0) {
+                return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
         }
 
         /* TAUOLA common blocks and routines. */
@@ -254,7 +302,7 @@ enum alouette_return alouette_initialise(
          */
         unsigned long tmp = 1357894;
         enum alouette_return rc;
-        if ((rc = alouette_seed_set(&tmp)) != ALOUETTE_RETURN_SUCCESS)
+        if ((rc = random_initialise(&tmp)) != ALOUETTE_RETURN_SUCCESS)
                 return rc;
 
         /* Initialise the decay routine. */
@@ -268,7 +316,7 @@ enum alouette_return alouette_initialise(
         memset(&_stack, 0x0, sizeof _stack);
 
         /* Initialise the random engine with the the user supplied seed. */
-        if ((rc = alouette_seed_set(seed)) != ALOUETTE_RETURN_SUCCESS)
+        if ((rc = random_initialise(seed)) != ALOUETTE_RETURN_SUCCESS)
                 return rc;
 
         /* Flag as initialised and return. */
@@ -277,25 +325,34 @@ enum alouette_return alouette_initialise(
         return ALOUETTE_RETURN_SUCCESS;
 }
 
-/* Get a return code as a string. */
-const char * alouette_strerror(enum alouette_return rc)
+/* Get the last (error) message(s). */
+const char * alouette_message(void)
 {
         static const char * msg[ALOUETTE_N_RETURNS] = { "Operation succeeded",
                 "A value is out of range", "A floating point error occured",
                 "Couldn't read or write file", "No such file or directory",
                 "A Tauola error occured" };
 
-        if ((rc < 0) || (rc >= ALOUETTE_N_RETURNS))
-                return NULL;
-        else
-                return msg[rc];
+        if (_message.code == ALOUETTE_RETURN_SUCCESS) {
+                if (_message.data[0] == 0x0) {
+                        return NULL;
+                } else {
+                        return _message.data;
+                }
+        } else if (_message.code == ALOUETTE_RETURN_TAULOA_ERROR) {
+                        return _message.data;
+        } else {
+                return msg[_message.code];
+        }
 }
 
 /* Low level decay routine with TAUOLA. */
 static enum alouette_return decay(int pid, int pull)
 {
         /* Register a rally in case of a TAUOLA error. */
-        if (setjmp(_jump_buffer) != 0) return ALOUETTE_RETURN_TAULOA_ERROR;
+        if (setjmp(_jump_buffer) != 0) {
+                return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
+        }
 
         /* XXX Allow to select the decay mode. */
 
@@ -313,10 +370,14 @@ enum alouette_return alouette_decay(
 {
         enum alouette_return rc;
 
-        /* Reset the stack. */
+        /* Reset the stacks. */
+        message_reset();
         _stack.size = 0;
         _stack.index = -1;
-        if (abs(pid) != 15) return ALOUETTE_RETURN_DOMAIN_ERROR;
+        if (abs(pid) != 15) {
+                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                    "bad pid for mother particle (%d)", pid);
+        }
 
         /* Decay a tau in its rest frame. */
         for (;;) {
@@ -335,7 +396,8 @@ enum alouette_return alouette_decay(
         /* Check the result. */
         if (isinf(_stack.p[0])) {
                 _stack.size = 0;
-                return ALOUETTE_RETURN_FLOATING_ERROR;
+                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
+                        "floating point exception (inf)");
         }
 
         /* Boost the daughters to the lab frame. */
@@ -381,7 +443,10 @@ static enum alouette_return rotate_direction(
 {
         /* Check the numerical sine. */
         const double stsq = 1. - cos_theta * cos_theta;
-        if (stsq <= 0.) return ALOUETTE_RETURN_FLOATING_ERROR;
+        if (stsq <= 0.) {
+                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
+                        "floating point exception (%g <= 0.)", stsq);
+        }
         const double st = sqrt(stsq);
 
         /* select the co-vectors for the local basis. */
@@ -437,7 +502,11 @@ static enum alouette_return build_rotation(
         double n[3] = { vi[1] * vf[2] - vi[2] * vf[1],
                 vi[2] * vf[0] - vi[0] * vf[2], vi[0] * vf[1] - vi[1] * vf[0] };
         double nrm = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
-        if (fabs(nrm) <= FLT_EPSILON) return ALOUETTE_RETURN_FLOATING_ERROR;
+        if (fabs(nrm) <= FLT_EPSILON) {
+                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
+                    "floating point exception (%g <= %g)", fabs(nrm),
+                    FLT_EPSILON);
+        }
         nrm = 1. / sqrt(nrm);
         n[0] *= nrm;
         n[1] *= nrm;
@@ -470,11 +539,17 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
 {
         enum alouette_return rc;
 
-        /* Reset the stack. */
+        /* Reset the stacks. */
+        message_reset();
         _stack.size = 0;
         _stack.index = -1;
-        if ((abs(pid) != 16) || (bias <= -1.))
-                return ALOUETTE_RETURN_DOMAIN_ERROR;
+        if (abs(pid) != 16) {
+                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                        "bad pid value for daugther particle (%d)", pid);
+        } else if (bias <= -1.) {
+                return message_error(ALOUETTE_RETURN_DOMAIN_ERROR,
+                        "bad bias value (%g <= -1)", bias);
+        }
 
         /* Decay an unpolarised tau in its rest frame. */
         if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS) return rc;
@@ -483,7 +558,8 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         /* Check the result. */
         if (isinf(_stack.p[0])) {
                 _stack.size = 0;
-                return ALOUETTE_RETURN_FLOATING_ERROR;
+                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
+                        "floating point exception (inf)");
         }
 
         /* Get the daughter's index. */

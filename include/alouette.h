@@ -72,12 +72,12 @@ enum alouette_return alouette_initialise(
     unsigned long * seed, double * xk0dec);
 
 /**
- * Return a string describing an `alouette_return` code.
+ * Return the last (error) message(s).
  *
- * This function is analog to the C89 `strerror` function but specific to
- * ALOUETTE return codes.
+ * This function returns a string containing the last (error) message(s) issued
+ * by TAUOLA, or by the ALOUETTE wrapper.
  */
-const char * alouette_strerror(enum alouette_return rc);
+const char * alouette_message(void);
 
 /**
  * Perform a forward Monte-Carlo tau decay.

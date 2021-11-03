@@ -29,7 +29,7 @@ int main()
         /* Initialise the ALOUETTE library. */
         enum alouette_return rc;
         if ((rc = alouette_initialise(NULL, NULL)) != ALOUETTE_RETURN_SUCCESS) {
-                fprintf(stderr, "alouette: %s\n", alouette_strerror(rc));
+                fprintf(stderr, "alouette: %s\n", alouette_message());
                 exit(EXIT_FAILURE);
         };
 
