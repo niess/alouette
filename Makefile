@@ -5,7 +5,7 @@ BUILD_DIR= build
 
 CC=     gcc
 LD=     $(CC) -shared
-CFLAGS= -g -O3 -Wall
+CFLAGS= -O3 -g -Wall
 SHARED= -fPIC
 
 
@@ -42,7 +42,8 @@ TAUOLA_SOURCES=  $(TAUOLA_F_DIR)/curr_cleo.f \
                  $(TAUOLA_F_DIR)/new-currents/RChL-currents/rcht_common/wid_a1_fitKKpi.f \
                  $(TAUOLA_I_DIR)/tauola_extras.f
 TAUOLA_OBJS=     $(BUILD_DIR)/tauola.o
-TAUOLA_FFLAGS=   -fno-automatic -fno-backslash -ffixed-line-length-132 \
+TAUOLA_FFLAGS=   $(CFLAGS) -w \
+                 -fno-automatic -fno-backslash -ffixed-line-length-132 \
                  -J$(BUILD_DIR)
 
 $(BUILD_DIR)/tauola.o: src/tauola.f | build
