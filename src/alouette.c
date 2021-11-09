@@ -334,85 +334,23 @@ const char * alouette_message(void)
 }
 
 /* Low level decay routine with TAUOLA. */
-static enum alouette_return decay(int pid, int pull)
+static enum alouette_return decay(int pid, int mode)
 {
         /* Register a rally in case of a TAUOLA error. */
         if (setjmp(_jump_buffer) != 0) {
                 return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
         }
 
-        /* XXX Allow to select the decay mode. */
+        tauola_jaki.jak1 = mode;
+        tauola_jaki.jak2 = mode;
 
         /* Call TAUOLA's decay routine. */
         int type = (pid > 0) ? 1 : 2;
-        type += 10 * (pull != 0);
+        tauola_decay(&type, _products->polarimetric);
+        type += 10;
         tauola_decay(&type, _products->polarimetric);
 
         return ALOUETTE_RETURN_SUCCESS;
-}
-
-/* Decay a tau with TAUOLA. */
-enum alouette_return alouette_decay(int pid, const double momentum[3],
-    const double * polarisation, struct alouette_products * products)
-{
-        /* Initialise the library, if not already done. */
-        enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
-                return rc;
-
-        /* Initialise the products container. */
-        _products = products;
-        products->size = 0;
-        products->weight = 0.;
-        if (abs(pid) != 15) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad pid for mother particle (%d)", pid);
-        }
-
-        /* Decay a tau in its rest frame. */
-        for (;;) {
-                /* XXX Rotate instead of re-decaying */
-                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
-                        return rc;
-                if (polarisation == NULL) break;
-                const double * const p = products->polarimetric;
-                const double w =
-                    0.5 * (1. + p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
-                if (alouette_random() <= w) break;
-        }
-        if ((rc = decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
-
-        /* Check the result. */
-        if (isinf(products->P[0][0])) {
-                _products->size = 0;
-                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
-                        "floating point exception (inf)");
-        }
-
-        /* Boost the daughters to the lab frame. */
-        const double amtau = tauola_parmas.amtau;
-        const double tau[3] = { momentum[0] / amtau,
-                momentum[1] / amtau, momentum[2] / amtau };
-        const double gamma =
-            sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
-        rc = ALOUETTE_RETURN_SUCCESS;
-        if (gamma <= 1. + FLT_EPSILON) return rc;
-
-        int i;
-        double * P;
-        for (i = 0, P = &products->P[0][0]; i < products->size; i++, P += 4) {
-                /* Apply the boost. */
-                const double ptau =
-                    P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
-                const double tmp = ptau / (gamma + 1.) + P[3];
-                P[0] += tmp * tau[0];
-                P[1] += tmp * tau[1];
-                P[2] += tmp * tau[2];
-                P[3] = gamma * P[3] + ptau;
-        }
-        products->weight = 1.;
-
-        return rc;
 }
 
 /* Multiply a matrix and a vector. */
@@ -485,7 +423,7 @@ static enum alouette_return rotate_direction(
 
 /* Build a rotation matrix from vi to vf. */
 static enum alouette_return build_rotation(
-    double * vi, double * vf, double norm_f, double * R)
+    const double * vi, const double * vf, double norm_f, double * R)
 {
         /* Build the rotation axis. */
         double n[3] = { vi[1] * vf[2] - vi[2] * vf[1],
@@ -522,6 +460,95 @@ static enum alouette_return build_rotation(
         return ALOUETTE_RETURN_SUCCESS;
 }
 
+/* Decay a tau with TAUOLA. */
+/* XXX Allow to select the decay mode. */
+enum alouette_return alouette_decay(int pid, const double momentum[3],
+    const double * polarisation, struct alouette_products * products)
+{
+        /* Initialise the library, if not already done. */
+        enum alouette_return rc;
+        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
+                return rc;
+
+        /* Initialise the products container. */
+        _products = products;
+        products->size = 0;
+        products->weight = 0.;
+        if (abs(pid) != 15) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad pid for mother particle (%d)", pid);
+        }
+
+        /* Decay a tau in its rest frame. */
+        for (;;) {
+                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
+                        return rc;
+                if (!isinf(products->P[0][0])) break;
+        }
+
+        if (polarisation != NULL) {
+                /* Apply random rotation(s) until the decay polarimetric vector
+                 * is consistent with the mother's polarisation.
+                 */
+                const double * const pi = products->polarimetric;
+                double pf[3] = {pi[0], pi[1], pi[2]};
+                for (;;) {
+                        const double w = 1. + pf[0] * polarisation[0] +
+                                              pf[1] * polarisation[1] +
+                                              pf[2] * polarisation[2];
+                        if (2 * alouette_random() <= w) break;
+
+                        /* Apply a random rotation. */
+                        const double cos_theta = 1. - 2. * alouette_random();
+                        if (rotate_direction(cos_theta, pf) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
+                        }
+                }
+
+                /* Update the direction of decay products according to the
+                 * random rotation(s).
+                 */
+                if ((pf[0] != pi[0]) || (pf[1] != pi[1]) || (pf[2] != pi[2])) {
+                        double R[9];
+                        if ((rc = build_rotation(pi, pf, 1., R)) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
+                        }
+                        int i;
+                        for (i = 0; i < products->size; i++) {
+                                mv_multiply(R, &products->P[i][0]);
+                        }
+                        memcpy(products->polarimetric, pf, sizeof pf);
+                }
+        }
+
+        /* Boost the daughters to the lab frame. */
+        const double amtau = tauola_parmas.amtau;
+        const double tau[3] = { momentum[0] / amtau,
+                momentum[1] / amtau, momentum[2] / amtau };
+        const double gamma =
+            sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
+        rc = ALOUETTE_RETURN_SUCCESS;
+        if (gamma <= 1. + FLT_EPSILON) return rc;
+
+        int i;
+        double * P;
+        for (i = 0, P = &products->P[0][0]; i < products->size; i++, P += 4) {
+                /* Apply the boost. */
+                const double ptau =
+                    P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
+                const double tmp = ptau / (gamma + 1.) + P[3];
+                P[0] += tmp * tau[0];
+                P[1] += tmp * tau[1];
+                P[2] += tmp * tau[2];
+                P[3] = gamma * P[3] + ptau;
+        }
+        products->weight = 1.;
+
+        return rc;
+}
+
 /* Backward decay from a tau neutrino to a tau. */
 enum alouette_return alouette_undecay(int pid, const double momentum[3],
     alouette_polarisation_cb * polarisation, double bias,
@@ -545,14 +572,10 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         }
 
         /* Decay an unpolarised tau in its rest frame. */
-        if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS) return rc;
-        if ((rc = decay(pid, 1)) != ALOUETTE_RETURN_SUCCESS) return rc;
-
-        /* Check the result. */
-        if (isinf(products->P[0][0])) {
-                products->size = 0;
-                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
-                        "floating point exception (inf)");
+        for (;;) {
+                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
+                        return rc;
+                if (!isinf(products->P[0][0])) break;
         }
 
         /* Get the daughter's index. */
@@ -564,6 +587,8 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
         /* Re-draw the daughter's direction in the mother's rest frame using
          * a biased distribution, towards the daughter's direction in the
          * laboratory frame.
+         *
+         * XXX is this useful?
          */
         double weight = 1.;
         const double energy = sqrt(momentum[0] * momentum[0] +
