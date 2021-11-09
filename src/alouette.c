@@ -461,8 +461,7 @@ static enum alouette_return build_rotation(
 }
 
 /* Decay a tau with TAUOLA. */
-/* XXX Allow to select the decay mode. */
-enum alouette_return alouette_decay(int pid, const double momentum[3],
+enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
     const double * polarisation, struct alouette_products * products)
 {
         /* Initialise the library, if not already done. */
@@ -481,7 +480,7 @@ enum alouette_return alouette_decay(int pid, const double momentum[3],
 
         /* Decay a tau in its rest frame. */
         for (;;) {
-                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
+                if ((rc = decay(pid, mode)) != ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (!isinf(products->P[0][0])) break;
         }
@@ -550,9 +549,9 @@ enum alouette_return alouette_decay(int pid, const double momentum[3],
 }
 
 /* Backward decay from a tau neutrino to a tau. */
-enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    alouette_polarisation_cb * polarisation, double bias,
-    struct alouette_products * products)
+enum alouette_return alouette_undecay(int mode, int pid,
+    const double momentum[3], alouette_polarisation_cb * polarisation,
+    double bias, struct alouette_products * products)
 {
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
@@ -573,7 +572,7 @@ enum alouette_return alouette_undecay(int pid, const double momentum[3],
 
         /* Decay an unpolarised tau in its rest frame. */
         for (;;) {
-                if ((rc = decay(pid, 0)) != ALOUETTE_RETURN_SUCCESS)
+                if ((rc = decay(pid, mode)) != ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (!isinf(products->P[0][0])) break;
         }

@@ -12,12 +12,15 @@ provides the following C functions:
 ```c
 /* Perform a forward Monte-Carlo tau decay. */
 enum alouette_return alouette_decay(
+    int mode,
     int pid, const double momentum[3], const double * polarisation,
     struct alouette_products * products);
 
 /* Perform a backward Monte-Carlo tau decay. */
-enum alouette_return alouette_undecay(int pid, const double momentum[3],
-    alouette_polarisation_cb * polarisation, double bias,
+enum alouette_return alouette_undecay(
+    int mode,
+    int pid, const double momentum[3], alouette_polarisation_cb * polarisation,
+    double bias,
     struct alouette_products * products);
 ```
 

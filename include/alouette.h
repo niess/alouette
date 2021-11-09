@@ -90,7 +90,8 @@ struct alouette_products {
 /**
  * Perform a forward Monte-Carlo tau decay.
  *
- * @param pid             The PDG ID of the decaying tau, i.e. 15 or -15.
+ * @param mode            The tau decay mode, or `0`.
+ * @param pid             The PDG ID of the decaying tau, i.e. `15` or `-15`.
  * @param momentum        The tau momentum at decay, in GeV/c.
  * @param polarisation    The tau polarisation vector, or `NULL`.
  * @param products        The decay products.
@@ -99,6 +100,10 @@ struct alouette_products {
  *
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
  * be provided. If `ǸULL` spin effects are not simulated.
+ *
+ * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
+ * then the decay mode is randomised over al available modes, according to
+ * branching ratios.
  *
  * __Error codes__
  *
@@ -109,6 +114,7 @@ struct alouette_products {
  *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
 enum alouette_return alouette_decay(
+    int mode,
     int pid,
     const double momentum[3],
     const double * polarisation,
@@ -117,12 +123,16 @@ enum alouette_return alouette_decay(
 /**
  * Callback for the tau polarisation in backward decays.
  *
- * @param pid             The PDG ID of the tau mother, i.e. 15 or -15.
+ * @param pid             The PDG ID of the tau mother, i.e. `15` or `-15`.
  * @param momentum        The tau's momentum at decay, in GeV/c.
  * @param polarisation    The tau polarisation.
  *
  * In a backward decay, the spin polarisation of the tau mother is not known
  * a priori. The user can supply an a posteriori value with this callback.
+ *
+ * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
+ * then the decay mode is randomised over al available modes, according to
+ * branching ratios.
  */
 typedef void alouette_polarisation_cb(
     int pid,
@@ -132,8 +142,9 @@ typedef void alouette_polarisation_cb(
 /**
  * Perform a backward Monte-Carlo tau decay.
  *
+ * @param mode            The tau decay mode, or `0`.
  * @param pid             The PDG ID of the tau neutrino decaying product,
- *                        i.e. 16 or -16.
+ *                        i.e. `16` or `-16`.
  * @param momentum        The neutrino momentum after decay, in GeV/c.
  * @param polarisation    A callback for the primary tau spin polarisation or
  *                        `NULL`.
@@ -161,6 +172,7 @@ typedef void alouette_polarisation_cb(
  *     ALOUETTE_RETURN_TAUOLA_ERROR      A TAUOLA error occured.
  */
 enum alouette_return alouette_undecay(
+    int mode,
     int pid,
     const double momentum[3],
     alouette_polarisation_cb * polarisation,
