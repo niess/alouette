@@ -1,6 +1,9 @@
 # Ignore binaries.
 bin
+build
 lib
 *.o
+*.pyc
+*.pyo
 src/TAUOLA
 *.so

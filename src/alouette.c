@@ -35,6 +35,14 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+/*  Extra debugging options, on linux. */
+#ifdef ALOUETTE_DEBUG
+#ifndef __USE_GNU
+#define __USE_GNU
+#endif
+#include <fenv.h>
+#endif
+
 /* Container for TAUOLA's decay products. */
 static struct alouette_products * _products;
 
@@ -135,6 +143,10 @@ static struct random_stream _random_stream = {0};
 /* Get the random seed of the built-in PRNG. */
 unsigned long alouette_random_seed(void)
 {
+        if (!_random_stream.initialised) {
+                alouette_random_set(NULL);
+        }
+
         return _random_stream.seed;
 }
 
@@ -249,6 +261,13 @@ enum alouette_return alouette_initialise(double * xk0dec)
         static int _initialised = 0;
         message_reset();
         if (_initialised) return ALOUETTE_RETURN_SUCCESS;
+
+#ifdef ALOUETTE_DEBUG
+        /* Enable floating point exceptions. */
+        feclearexcept(FE_ALL_EXCEPT);
+        feenableexcept(
+            FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW);
+#endif
 
         /* Rally point in case of a TAUOLA error. */
         if (setjmp(_jump_buffer) != 0) {
@@ -486,39 +505,46 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
 
         if (polarisation != NULL) {
-                /* Apply random rotation(s) until the decay polarimetric vector
-                 * is consistent with the mother's polarisation.
-                 */
                 const double * const pi = products->polarimetric;
-                double pf[3] = {pi[0], pi[1], pi[2]};
-                for (;;) {
-                        const double w = 1. + pf[0] * polarisation[0] +
-                                              pf[1] * polarisation[1] +
-                                              pf[2] * polarisation[2];
-                        if (2 * alouette_random() <= w) break;
+                const double pi2 =
+                    pi[0] * pi[0] + pi[1] * pi[1] + pi[2] * pi[2];
+                if (pi2 > FLT_EPSILON) {
+                        /* Apply random rotation(s) until the decay polarimetric
+                         * vector is consistent with the mother's polarisation.
+                         */
+                        double pf[3] = {pi[0], pi[1], pi[2]};
+                        for (;;) {
+                                const double w = 1. + pf[0] * polarisation[0] +
+                                                      pf[1] * polarisation[1] +
+                                                      pf[2] * polarisation[2];
+                                if (2 * alouette_random() <= w) break;
 
-                        /* Apply a random rotation. */
-                        const double cos_theta = 1. - 2. * alouette_random();
-                        if (rotate_direction(cos_theta, pf) !=
-                            ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
+                                /* Apply a random rotation. */
+                                const double cos_theta =
+                                    1. - 2. * alouette_random();
+                                if (rotate_direction(cos_theta, pf) !=
+                                    ALOUETTE_RETURN_SUCCESS) {
+                                        return rc;
+                                }
                         }
-                }
 
-                /* Update the direction of decay products according to the
-                 * random rotation(s).
-                 */
-                if ((pf[0] != pi[0]) || (pf[1] != pi[1]) || (pf[2] != pi[2])) {
-                        double R[9];
-                        if ((rc = build_rotation(pi, pf, 1., R)) !=
-                            ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
+                        /* Update the direction of decay products according to
+                         * the random rotation(s).
+                         */
+                        if ((pf[0] != pi[0]) || (pf[1] != pi[1]) ||
+                            (pf[2] != pi[2])) {
+                                double R[9];
+                                if ((rc = build_rotation(pf, pi, 1., R)) !=
+                                    ALOUETTE_RETURN_SUCCESS) {
+                                        return rc;
+                                }
+                                int i;
+                                for (i = 0; i < products->size; i++) {
+                                        mv_multiply(R, &products->P[i][0]);
+                                }
+
+                                memcpy(products->polarimetric, pf, sizeof pf);
                         }
-                        int i;
-                        for (i = 0; i < products->size; i++) {
-                                mv_multiply(R, &products->P[i][0]);
-                        }
-                        memcpy(products->polarimetric, pf, sizeof pf);
                 }
         }
 

@@ -1,4 +1,5 @@
 PYTHON=  python3
+PACKAGE= _core.abi3.so
 LIB=     libalouette.so
 
 BUILD_DIR= build
@@ -11,6 +12,9 @@ SHARED= -fPIC
 
 .PHONY: lib
 lib: lib/$(LIB)
+
+.PHONY: package
+package: alouette/$(PACKAGE)
 
 
 # Bundle TAUOLA
@@ -59,7 +63,7 @@ $(TAUOLA_DIR):
 	rm -f $(TAUOLAPP_TARBALL)
 
 
-# Build Alouette
+# Build the library
 ALOUETTE_INCLUDES= include/alouette.h
 ALOUETTE_OBJS=     $(BUILD_DIR)/alouette.o
 
@@ -69,6 +73,12 @@ $(BUILD_DIR)/alouette.o: src/alouette.c $(ALOUETTE_INCLUDES) | build
 
 lib/$(LIB): $(ALOUETTE_OBJS) $(TAUOLA_OBJS) | libdir
 	$(LD) -o $@ $^ -lm
+
+
+# Build the package
+alouette/$(PACKAGE): lib/$(LIB) $(ALOUETTE_INCLUDES) src/build-alouette.py setup.py
+	@ln -frs lib/$(LIB) alouette/$(LIB)
+	$(PYTHON) setup.py build --build-lib .
 
 
 # Build examples
@@ -95,4 +105,4 @@ libdir:
 
 .PHONY: clean
 clean:
-	rm -rf bin build lib
+	rm -rf bin build lib alouette/*.so
