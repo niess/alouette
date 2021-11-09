@@ -3,10 +3,11 @@
 
 ## Description
 
-ALOUETTE is a backward Monte-Carlo library for tau decays. It is built over
-tauola-fortran (v2.9, LHC) from the [TAUOLA universal
-interface](http://tauolapp.web.cern.ch/tauolapp/).  The library API provides
-the following C functions:
+ALOUETTE is a C wrapper over [TAUOLA][TAUOLA] allowing to perform both forward
+and backward Monte-Carlo tau decays. It is built over tauola-fortran
+distribution from the [TAUOLA universal
+interface](http://tauolapp.web.cern.ch/tauolapp/) (1.1.8, LHC).  The library API
+provides the following C functions:
 
 ```c
 /* Perform a forward Monte-Carlo tau decay. */
@@ -40,3 +41,6 @@ TAUOLA and the ALOUETTE wrapper do **not** support **multi-threading**.
 
 The ALOUETTE wrapper is  under the **GNU LGPLv3** license. See the provided
 `LICENSE` and `COPYING.LESSER` files.
+
+
+[TAUOLA]: https://www.sciencedirect.com/science/article/pii/001046559190038M

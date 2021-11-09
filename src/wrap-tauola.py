@@ -345,7 +345,10 @@ def wrap(sources, includes, outfile):
 
     code = [
 f'''!     ==================================================================
-!     This is a C-library compliant distribution of TAUOLA
+!     This is a C-library compliant re-distribution of TAUOLA
+!
+!     The original FORTRAN code is available from the tauolapp website:
+!     https://tauolapp.web.cern.ch/tauolapp (v1.1.8, LHC).
 !
 !     The main library function is the `tauola_decay` routine, defined
 !     below. It wraps TAUOLA internal routines as closures. In addition,
