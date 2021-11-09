@@ -27,19 +27,21 @@ static void polarise(int pid, const double momentum[3], double * polarisation)
 int main()
 {
         /* Randomise a few tau decays. */
+        const double momentum[3] = { 0., 0., 1. };
+
         int i;
         for (i = 0; i < 3; i++) {
-                double weight, momentum[3] = { 0., 0., 1. };
-                if (alouette_undecay(16, momentum, polarise, 0., &weight) !=
+                struct alouette_products products;
+                if (alouette_undecay(16, momentum, polarise, 0., &products) !=
                     ALOUETTE_RETURN_SUCCESS)
                         continue;
 
-                int pid;
-                printf("# Event %d (%.5E) :\n", i + 1, weight);
-                while (alouette_product(&pid, momentum) ==
-                    ALOUETTE_RETURN_SUCCESS) {
-                        printf("    %4d %12.5lE %12.5lE %12.5lE\n", pid,
-                            momentum[0], momentum[1], momentum[2]);
+                printf("# Event %d (%.5E) :\n", i + 1, products.weight);
+                int j;
+                for (j = 0; j < products.size; j++) {
+                        printf("    %4d %12.5lE %12.5lE %12.5lE\n",
+                            products.pid[j], products.P[j][0], products.P[j][1],
+                            products.P[j][2]);
                 }
         }
 

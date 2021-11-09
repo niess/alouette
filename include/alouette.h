@@ -69,17 +69,36 @@ enum alouette_return alouette_initialise(
  */
 const char * alouette_message(void);
 
+
+/**
+ * Container for TAUOLA decay products.
+ */
+struct alouette_products {
+#define ALOUETTE_MAX_SIZE 16
+        /** Number of decay products. */
+        int size;
+        /** PDG IDs of decay products. */
+        int pid[ALOUETTE_MAX_SIZE];
+        /** Four momenta (px, py, pz, E) of decay products, in GeV/c. */
+        double P[ALOUETTE_MAX_SIZE][4];
+        /** Polarimetric vector of the decay. */
+        double polarimetric[3];
+        /** Monte Carlo weight of the decay. */
+        double weight;
+};
+
 /**
  * Perform a forward Monte-Carlo tau decay.
  *
  * @param pid             The PDG ID of the decaying tau, i.e. 15 or -15.
  * @param momentum        The tau momentum at decay, in GeV/c.
  * @param polarisation    The tau polarisation vector, or `NULL`.
+ * @param products        The decay products.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
- * be provided. If `ǸULL` spin effects are neglected.
+ * be provided. If `ǸULL` spin effects are not simulated.
  *
  * __Error codes__
  *
@@ -92,7 +111,8 @@ const char * alouette_message(void);
 enum alouette_return alouette_decay(
     int pid,
     const double momentum[3],
-    const double * polarisation);
+    const double * polarisation,
+    struct alouette_products * products);
 
 /**
  * Callback for the tau polarisation in backward decays.
@@ -118,7 +138,7 @@ typedef void alouette_polarisation_cb(
  * @param polarisation    A callback for the primary tau spin polarisation or
  *                        `NULL`.
  * @param bias            Tuning parameter for the bias.
- * @param weight          The backward Monte-Carlo weight.
+ * @param weight          The backward Monte-Carlo decay products.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
@@ -145,45 +165,7 @@ enum alouette_return alouette_undecay(
     const double momentum[3],
     alouette_polarisation_cb * polarisation,
     double bias,
-    double * weight);
-
-/**
- * Iterator over the decay products.
- *
- * @param pid         The PDG ID of the retrieved product.
- * @param momentum    The momentum of the retrieved product, in GeV/c.
- * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
- * code is returned as detailed below.
- *
- * Loop over this routine after an `alouette_decay` in order to retrieve all
- * the decay products.
- *
- * __Warning__ : the decay products are consumed by the iterator.
- *
- * __Error codes__
- *
- *     ALOUETTE_RETURN_VALUE_ERROR    No product is available.
- */
-enum alouette_return alouette_product(
-    int * pid,
-    double momentum[3]);
-
-/**
- * Getter for the polarimetric vector of the last decay.
- *
- * @param polarimetric    The polarimetric vector to fill.
- * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
- * code is returned as detailed below.
- *
- * Call this routine after an `alouette_decay` or `alouette_undecay` in order
- * to retrieve the polarimetric vector of the decay.
- *
- * __Error codes__
- *
- *     ALOUETTE_RETURN_VALUE_ERROR    No decay is available.
- */
-enum alouette_return alouette_polarimetric(
-    double polarimetric[3]);
+    struct alouette_products * products);
 
 /**
  * The library PRNG, uniform over (0,1).
