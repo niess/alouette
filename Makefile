@@ -87,7 +87,7 @@ EXAMPLES_LDFLAGS= -lalouette -lm
 
 examples: bin/example-forward bin/example-backward
 
-bin/example-%: examples/example-%.c lib | bin
+bin/example-%: examples/%.c lib | bin
 	$(CC) -o $@ $(EXAMPLES_CFLAGS) $< $(EXAMPLES_LDFLAGS)
 
 

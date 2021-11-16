@@ -102,6 +102,7 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
 
     if mode is None:
         mode = 0
+    # XXX Allow a list of mode(s) ?
 
     if pid is None:
         pid = 15
