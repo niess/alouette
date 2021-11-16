@@ -1,4 +1,4 @@
-from .core import decay, Products
+from .core import decay, undecay
 from .random import random
 
-__all__ = ('decay', 'Products', 'random')
+__all__ = ('decay', 'random', 'undecay')

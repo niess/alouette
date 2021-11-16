@@ -22,8 +22,10 @@ def format_source(*paths):
                 break
     paths = pruned
 
-    return os.linesep.join([
+    source = os.linesep.join([
         f'#include "{path}"' for path in paths])
+
+    return source
 
 
 def load_headers(*paths):
@@ -43,7 +45,16 @@ def load_headers(*paths):
         cpp.write(output)
 
         headers.append(output.getvalue())
-    return os.linesep.join(headers)
+    headers = os.linesep.join(headers)
+
+    headers += '''
+        extern "Python" void _polarisation_callback(
+            int pid,
+            const double momentum[3],
+            double * polarisation);
+'''
+
+    return headers
 
 
 ffi = FFI()

@@ -335,20 +335,18 @@ enum alouette_return alouette_initialise(double * xk0dec)
 /* Get the last (error) message(s). */
 const char * alouette_message(void)
 {
-        static const char * msg[ALOUETTE_N_RETURNS] = { "Operation succeeded",
-                "A value is out of range", "A floating point error occured",
-                "A Tauola error occured" };
+        static const char * msg[ALOUETTE_N_RETURNS] = {
+            "Operation succeeded", "A value is out of range",
+            "A floating point error occured", "A Tauola error occured" };
 
-        if (_message.code == ALOUETTE_RETURN_SUCCESS) {
-                if (_message.data[0] == 0x0) {
+        if (_message.data[0] == 0x0) {
+                if (_message.code == ALOUETTE_RETURN_SUCCESS) {
                         return NULL;
                 } else {
-                        return _message.data;
+                        return msg[_message.code];
                 }
-        } else if (_message.code == ALOUETTE_RETURN_TAULOA_ERROR) {
-                        return _message.data;
         } else {
-                return msg[_message.code];
+                return _message.data;
         }
 }
 
@@ -583,6 +581,8 @@ enum alouette_return alouette_undecay(int mode, int pid,
         enum alouette_return rc;
         if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
                 return rc;
+
+        /* XXX Check zero momentum? */
 
         /* Initialise the products container. */
         _products = products;
