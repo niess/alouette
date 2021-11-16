@@ -1,9 +1,11 @@
-# Ignore binaries.
+alouette/version.py
 bin
 build
 lib
 *.o
 *.pyc
 *.pyo
+site-packages
 src/TAUOLA
 *.so
+*.whl

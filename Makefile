@@ -77,7 +77,7 @@ lib/$(LIB): $(ALOUETTE_OBJS) $(TAUOLA_OBJS) | libdir
 
 # Build the package
 alouette/$(PACKAGE): lib/$(LIB) $(ALOUETTE_INCLUDES) src/build-alouette.py setup.py
-	@ln -frs lib/$(LIB) alouette/$(LIB)
+	@cd alouette && ln -fs ../lib/$(LIB)
 	$(PYTHON) setup.py build --build-lib .
 
 
@@ -105,4 +105,8 @@ libdir:
 
 .PHONY: clean
 clean:
-	rm -rf bin build lib alouette/*.so
+	rm -rf bin build lib alouette/libalouette.*
+
+.PHONY: dist-clean
+dist-clean:
+	rm -rf .eggs alouette.egg-info dist/*.whl
