@@ -505,45 +505,48 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
 
         if (polarisation != NULL) {
-                const double * const pi = products->polarimeter;
-                const double pi2 =
-                    pi[0] * pi[0] + pi[1] * pi[1] + pi[2] * pi[2];
-                if (pi2 > FLT_EPSILON) {
-                        /* Apply random rotation(s) until the decay polarimeter
-                         * vector is consistent with the mother's polarisation.
+                const double * const hi = products->polarimeter;
+                const double h2 =
+                    hi[0] * hi[0] + hi[1] * hi[1] + hi[2] * hi[2];
+                const double s2 = polarisation[0] * polarisation[0] +
+                    polarisation[1] * polarisation[1] +
+                    polarisation[2] * polarisation[2];
+                if ((h2 > FLT_EPSILON) && (s2 > FLT_EPSILON)) {
+                        /* Draw the direction of the polarimeter according to
+                         * the spin polarisation.
                          */
-                        double pf[3] = {pi[0], pi[1], pi[2]};
-                        for (;;) {
-                                const double w = 1. + pf[0] * polarisation[0] +
-                                                      pf[1] * polarisation[1] +
-                                                      pf[2] * polarisation[2];
-                                if (2 * alouette_random() <= w) break;
+                        double s = sqrt(s2);
+                        if (s > 1.) s = 1.;
+                        const double z = alouette_random();
+                        double delta2 = 4 * s * z + (s - 1.) * (s - 1.);
+                        if (delta2 <= FLT_EPSILON) delta2 = 0.;
+                        double cos_theta = (sqrt(delta2) - 1.) / s;
+                        if (cos_theta < -1.) cos_theta = -1.;
+                        else if (cos_theta > 1.) cos_theta = 1.;
 
-                                /* Apply a random rotation. */
-                                const double cos_theta =
-                                    1. - 2. * alouette_random();
-                                if (rotate_direction(cos_theta, pf) !=
-                                    ALOUETTE_RETURN_SUCCESS) {
-                                        return rc;
-                                }
+                        double u[3] = {polarisation[0] / s,
+                            polarisation[1] / s, polarisation[2] / s};
+                        if (rotate_direction(cos_theta, u) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
                         }
 
-                        /* Update the direction of decay products according to
-                         * the random rotation(s).
+                        /* Update the direction of decay products in order to
+                         * match the new polarimeter.
                          */
-                        if ((pf[0] != pi[0]) || (pf[1] != pi[1]) ||
-                            (pf[2] != pi[2])) {
-                                double R[9];
-                                if ((rc = build_rotation(pf, pi, 1., R)) !=
-                                    ALOUETTE_RETURN_SUCCESS) {
-                                        return rc;
-                                }
-                                int i;
-                                for (i = 0; i < products->size; i++) {
-                                        mv_multiply(R, &products->P[i][0]);
-                                }
+                        const double h = sqrt(h2);
+                        double R[9];
+                        if ((rc = build_rotation(u, hi, h, R)) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
+                        }
+                        int i;
+                        for (i = 0; i < products->size; i++) {
+                                mv_multiply(R, &products->P[i][0]);
+                        }
 
-                                memcpy(products->polarimeter, pf, sizeof pf);
+                        for (i = 0; i < 3; i++) {
+                                products->polarimeter[i] = h * u[i];
                         }
                 }
         }
