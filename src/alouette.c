@@ -449,9 +449,23 @@ static enum alouette_return build_rotation(
                 vi[2] * vf[0] - vi[0] * vf[2], vi[0] * vf[1] - vi[1] * vf[0] };
         double nrm = n[0] * n[0] + n[1] * n[1] + n[2] * n[2];
         if (fabs(nrm) <= FLT_EPSILON) {
-                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
-                    "floating point exception (%g <= %g)", fabs(nrm),
-                    FLT_EPSILON);
+                if (vi[0] * vf[0] + vi[1] * vf[1] + vi[2] * vf[2] > 0.) {
+                        /* The two vectors are aligned within numeric errors. */
+                        return ALOUETTE_RETURN_FLOATING_ERROR;
+                } else {
+                        /* The two vectors are back to back. */
+                        R[0] = -1.;
+                        R[1] = 0.;
+                        R[2] = 0.;
+                        R[3] = 0.;
+                        R[4] = -1.;
+                        R[5] = 0.;
+                        R[6] = 0.;
+                        R[7] = 0.;
+                        R[8] = -1.;
+
+                        return ALOUETTE_RETURN_SUCCESS;
+                }
         }
         nrm = 1. / sqrt(nrm);
         n[0] *= nrm;
@@ -536,17 +550,16 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                          */
                         const double h = sqrt(h2);
                         double R[9];
-                        if ((rc = build_rotation(u, hi, h, R)) !=
+                        if ((rc = build_rotation(u, hi, h, R)) ==
                             ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
-                        }
-                        int i;
-                        for (i = 0; i < products->size; i++) {
-                                mv_multiply(R, &products->P[i][0]);
-                        }
+                                int i;
+                                for (i = 0; i < products->size; i++) {
+                                        mv_multiply(R, &products->P[i][0]);
+                                }
 
-                        for (i = 0; i < 3; i++) {
-                                products->polarimeter[i] = h * u[i];
+                                for (i = 0; i < 3; i++) {
+                                        products->polarimeter[i] = h * u[i];
+                                }
                         }
                 }
         }
@@ -647,17 +660,16 @@ enum alouette_return alouette_undecay(int mode, int pid,
                          */
                         const double h = sqrt(h2);
                         double R[9];
-                        if ((rc = build_rotation(u, hi, h, R)) !=
+                        if ((rc = build_rotation(u, hi, h, R)) ==
                             ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
-                        }
-                        int i;
-                        for (i = 0; i < products->size; i++) {
-                                mv_multiply(R, &products->P[i][0]);
-                        }
+                                int i;
+                                for (i = 0; i < products->size; i++) {
+                                        mv_multiply(R, &products->P[i][0]);
+                                }
 
-                        for (i = 0; i < 3; i++) {
-                                products->polarimeter[i] = h * u[i];
+                                for (i = 0; i < 3; i++) {
+                                        products->polarimeter[i] = h * u[i];
+                                }
                         }
                 }
         }
