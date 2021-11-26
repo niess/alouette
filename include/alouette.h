@@ -81,8 +81,8 @@ struct alouette_products {
         int pid[ALOUETTE_MAX_SIZE];
         /** Four momenta (px, py, pz, E) of decay products, in GeV/c. */
         double P[ALOUETTE_MAX_SIZE][4];
-        /** Polarimetric vector of the decay. */
-        double polarimetric[3];
+        /** Polarimeter vector of the decay. */
+        double polarimeter[3];
         /** Monte Carlo weight of the decay. */
         double weight;
 };

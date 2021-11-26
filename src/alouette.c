@@ -363,9 +363,11 @@ static enum alouette_return decay(int pid, int mode)
 
         /* Call TAUOLA's decay routine. */
         int type = (pid > 0) ? 1 : 2;
-        tauola_decay(&type, _products->polarimetric);
+        double h[4];
+        tauola_decay(&type, h);
         type += 10;
-        tauola_decay(&type, _products->polarimetric);
+        tauola_decay(&type, h);
+        memcpy(_products->polarimeter, h, sizeof _products->polarimeter);
 
         return ALOUETTE_RETURN_SUCCESS;
 }
@@ -503,11 +505,11 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
 
         if (polarisation != NULL) {
-                const double * const pi = products->polarimetric;
+                const double * const pi = products->polarimeter;
                 const double pi2 =
                     pi[0] * pi[0] + pi[1] * pi[1] + pi[2] * pi[2];
                 if (pi2 > FLT_EPSILON) {
-                        /* Apply random rotation(s) until the decay polarimetric
+                        /* Apply random rotation(s) until the decay polarimeter
                          * vector is consistent with the mother's polarisation.
                          */
                         double pf[3] = {pi[0], pi[1], pi[2]};
@@ -541,7 +543,7 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                                         mv_multiply(R, &products->P[i][0]);
                                 }
 
-                                memcpy(products->polarimetric, pf, sizeof pf);
+                                memcpy(products->polarimeter, pf, sizeof pf);
                         }
                 }
         }
@@ -633,7 +635,7 @@ enum alouette_return alouette_undecay(int mode, int pid,
                         /* Update the generated state and the BMC weight. */
                         R = R_storage;
                         mv_multiply(R, pi);
-                        mv_multiply(R, products->polarimetric);
+                        mv_multiply(R, products->polarimeter);
                         weight = 0.5 * (cos_theta + 1.) / ((bias + 1.) * r);
                 }
         }
@@ -687,9 +689,9 @@ enum alouette_return alouette_undecay(int mode, int pid,
         if (polarisation != NULL) {
                 double pol[3];
                 polarisation(tau_pid, Pt, pol);
-                weight *= 1. + products->polarimetric[0] * pol[0] +
-                    products->polarimetric[1] * pol[1] +
-                    products->polarimetric[2] * pol[2];
+                weight *= 1. + products->polarimeter[0] * pol[0] +
+                    products->polarimeter[1] * pol[1] +
+                    products->polarimeter[2] * pol[2];
         }
 
         /* Replace the daughter particle with the tau mother. In order to
