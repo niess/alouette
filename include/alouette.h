@@ -159,9 +159,9 @@ typedef void alouette_polarisation_cb(
  *
  * The *bias* parameters allows to control the biasing of the angular
  * distribution of decay products in the mother's rest frame. It must be in the
- * range ]-1, +inf[, though values close to `-1` or much higher than `10` are
- * likely to be numerically unstable. Set it to to `0` for an unbiased
- * distribution, i.e. isotropic.
+ * range [-1, 1]. It is expected to be a hint on the mother's longitudinal spin
+ * polarisation. Set the bias to zero if the spin polarization is a priori
+ * unknown.
  *
  * __Error codes__
  *

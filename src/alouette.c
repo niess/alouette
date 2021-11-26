@@ -579,7 +579,7 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 
 /* Backward decay from a tau neutrino to a tau. */
 enum alouette_return alouette_undecay(int mode, int pid,
-    const double momentum[3], alouette_polarisation_cb * polarisation,
+    const double momentum[3], alouette_polarisation_cb * polarisation_cb,
     double bias, struct alouette_products * products)
 {
         /* Initialise the library, if not already done. */
@@ -596,9 +596,9 @@ enum alouette_return alouette_undecay(int mode, int pid,
         if (abs(pid) != 16) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad pid value for daugther particle (%d)", pid);
-        } else if (bias <= -1.) {
+        } else if ((bias < -1.) || (bias > 1.)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                        "bad bias value (%g <= -1)", bias);
+                        "bad bias value (%g)", bias);
         }
 
         /* Decay an unpolarised tau in its rest frame. */
@@ -614,36 +614,57 @@ enum alouette_return alouette_undecay(int mode, int pid,
         for (i = 0, pi = &products->P[0][0]; i < products->size; i++, pi += 4)
                 if (products->pid[i] == pid) break;
 
-        /* Re-draw the daughter's direction in the mother's rest frame using
-         * a biased distribution, towards the daughter's direction in the
-         * laboratory frame.
-         *
-         * XXX is this useful?
-         */
-        double weight = 1.;
-        const double energy = sqrt(momentum[0] * momentum[0] +
-            momentum[1] * momentum[1] + momentum[2] * momentum[2]);
-        double * R = NULL;
-        double R_storage[9];
-        if (bias != 0.) {
-                /* Draw the new direction. */
-                double u[3] = { momentum[0] / energy, momentum[1] / energy,
-                        momentum[2] / energy };
-                const double r = alouette_random();
-                const double cos_theta = 2. * pow(r, 1. / (bias + 1.)) - 1.;
-                if ((rotate_direction(cos_theta, u) ==
-                        ALOUETTE_RETURN_SUCCESS) &&
-                    (build_rotation(u, pi, pi[3], R_storage) ==
-                        ALOUETTE_RETURN_SUCCESS)) {
-                        /* Update the generated state and the BMC weight. */
-                        R = R_storage;
-                        mv_multiply(R, pi);
-                        mv_multiply(R, products->polarimeter);
-                        weight = 0.5 * (cos_theta + 1.) / ((bias + 1.) * r);
+        double weight = 1;
+        if (polarisation_cb != NULL) {
+                const double * const hi = products->polarimeter;
+                const double h2 =
+                    hi[0] * hi[0] + hi[1] * hi[1] + hi[2] * hi[2];
+                const double s = fabs(bias);
+                if ((h2 > FLT_EPSILON) && (s > FLT_EPSILON)) {
+                        /* Draw the direction of the polarimeter according to
+                         * the daughter momentum and the bias polarisation.
+                         */
+                        const double z = alouette_random();
+                        double delta2 = 4 * s * z + (s - 1.) * (s - 1.);
+                        if (delta2 <= FLT_EPSILON) delta2 = 0.;
+                        double cos_theta = (sqrt(delta2) - 1.) / s;
+                        if (cos_theta < -1.) cos_theta = -1.;
+                        else if (cos_theta > 1.) cos_theta = 1.;
+                        weight /= 1. + s * cos_theta;
+
+                        double norm = bias / sqrt(momentum[0] * momentum[0] +
+                            momentum[1] * momentum[1] +
+                            momentum[2] * momentum[2]);
+                        double u[3] = {momentum[0] * norm,
+                            momentum[1] * norm, momentum[2] * norm};
+                        if (rotate_direction(cos_theta, u) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
+                        }
+
+                        /* Update the direction of decay products in order to
+                         * match the new polarimeter.
+                         */
+                        const double h = sqrt(h2);
+                        double R[9];
+                        if ((rc = build_rotation(u, hi, h, R)) !=
+                            ALOUETTE_RETURN_SUCCESS) {
+                                return rc;
+                        }
+                        int i;
+                        for (i = 0; i < products->size; i++) {
+                                mv_multiply(R, &products->P[i][0]);
+                        }
+
+                        for (i = 0; i < 3; i++) {
+                                products->polarimeter[i] = h * u[i];
+                        }
                 }
         }
 
         /* Compute the parameters of the frame transform. */
+        const double energy = sqrt(momentum[0] * momentum[0] +
+            momentum[1] * momentum[1] + momentum[2] * momentum[2]);
         const double d = energy * pi[3] + momentum[0] * pi[0] +
             momentum[1] * pi[1] + momentum[2] * pi[2];
         const double ee = energy + pi[3];
@@ -666,9 +687,6 @@ enum alouette_return alouette_undecay(int mode, int pid,
                         continue;
                 }
 
-                /* Apply the bias rotation. */
-                if (R != NULL) mv_multiply(R, pj);
-
                 /* Apply the boost and update the sum. */
                 const double ptau =
                     pj[0] * tau[0] + pj[1] * tau[1] + pj[2] * tau[2];
@@ -689,9 +707,9 @@ enum alouette_return alouette_undecay(int mode, int pid,
 
         /* Weight for the spin polarisation of the tau mother. */
         const int tau_pid = pid > 0 ? 15 : -15;
-        if (polarisation != NULL) {
+        if (polarisation_cb != NULL) {
                 double pol[3];
-                polarisation(tau_pid, Pt, pol);
+                polarisation_cb(tau_pid, Pt, pol);
                 weight *= 1. + products->polarimeter[0] * pol[0] +
                     products->polarimeter[1] * pol[1] +
                     products->polarimeter[2] * pol[2];
