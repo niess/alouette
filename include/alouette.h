@@ -142,26 +142,28 @@ typedef void alouette_polarisation_cb(
 /**
  * Perform a backward Monte-Carlo tau decay.
  *
- * @param mode            The tau decay mode, or `0`.
- * @param pid             The PDG ID of the tau neutrino decaying product,
- *                        i.e. `16` or `-16`.
- * @param momentum        The neutrino momentum after decay, in GeV/c.
- * @param polarisation    A callback for the primary tau spin polarisation or
+ * @param mode            The tau decay mode, or `0` for any.
+ * @param daughter        The PDG ID of the daughter decaying product,
+ *                        e.g. `16` for a tau neutrino.
+ * @param mother          The PDG ID of the mother particle,
+ *                        or `0` for any valid mother.
+ * @param momentum        The daughter momentum after decay, in GeV/c.
+ * @param polarisation    A callback for the spin polarisation of the mother or
  *                        `NULL`.
- * @param bias            Tuning parameter for the bias.
+ * @param bias            Tuning parameter for the spin bias.
  * @param weight          The backward Monte-Carlo decay products.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
- * Simulate a backward tau decay from a tau neutrino product. The polarisation
- * of the primary tau can be provided a posteriori. Set *polarisation* to
- * `NULL` in order to ignore spin effects.
+ * Simulate a backward tau decay from a given decay product. The spin
+ * polarisation of the primary tau can be provided a posteriori. Set
+ * *polarisation* to `NULL` in order to ignore spin effects.
  *
- * The *bias* parameters allows to control the biasing of the angular
+ * The spin *bias* parameters allows to control the biasing of the angular
  * distribution of decay products in the mother's rest frame. It must be in the
  * range [-1, 1]. It is expected to be a hint on the mother's longitudinal spin
- * polarisation. Set the bias to zero if the spin polarization is a priori
- * unknown.
+ * polarisation. Thus, typically -1 for a &tau;^(-) or +1 for a &tau;^(+). Set
+ * the bias to zero if the spin polarization is a priori unknown.
  *
  * __Error codes__
  *
@@ -173,7 +175,8 @@ typedef void alouette_polarisation_cb(
  */
 enum alouette_return alouette_undecay(
     int mode,
-    int pid,
+    int daughter,
+    int mother,
     const double momentum[3],
     alouette_polarisation_cb * polarisation,
     double bias,

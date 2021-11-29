@@ -591,7 +591,7 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 }
 
 /* Backward decay from a tau neutrino to a tau. */
-enum alouette_return alouette_undecay(int mode, int pid,
+enum alouette_return alouette_undecay(int mode, int daughter, int mother,
     const double momentum[3], alouette_polarisation_cb * polarisation_cb,
     double bias, struct alouette_products * products)
 {
@@ -600,23 +600,84 @@ enum alouette_return alouette_undecay(int mode, int pid,
         if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
                 return rc;
 
-        /* XXX Check zero momentum? */
+        /* Check zero momentum */
+        const double momentum2 = momentum[0] * momentum[0] +
+            momentum[1] * momentum[1] + momentum[2] * momentum[2];
+        if (momentum2 < FLT_EPSILON) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad momentum value for daugther particle (%g)",
+                    momentum2);
+        }
+
+        /* Check the mother PID */
+        if (mother && (abs(mother) != 15)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                        "bad pid value for mother particle (%d)", mother);
+        }
 
         /* Initialise the products container. */
         _products = products;
         products->size = 0;
         products->weight = 0.;
-        if (abs(pid) != 16) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                        "bad pid value for daugther particle (%d)", pid);
-        } else if ((bias < -1.) || (bias > 1.)) {
+        if ((bias < -1.) || (bias > 1.)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad bias value (%g)", bias);
         }
 
+        /* XXX Select the decay mode. */
+        double weight = 1;
+        int valid = 1;
+        const int ad = abs(daughter);
+        if (((ad >= 11) & (ad <= 14)) || (ad == 16)) {
+                /* Leptonic channel or inclusive nu_tau */
+                if (mother == 0) {
+                        mother = (daughter > 0) ? 15 : -15;
+                }
+
+                if (ad == 16) {
+                        if (mother * daughter < 0) {
+                                valid = 0;
+                        }
+                } else {
+                        if ((ad == 11) || (ad == 12)) {
+                                /* Electron case */
+                                if (mode == 0) {
+                                        mode = 1;
+                                } else if (mode != 1) {
+                                        valid = 0;
+                                }
+                        } else {
+                                /* Muon case */
+                                if (mode == 0) {
+                                        mode = 2;
+                                } else if (mode != 2) {
+                                        valid = 0;
+                                }
+                        }
+
+                        if ((ad % 2) == 0) {
+                                if (mother * daughter > 0) {
+                                        valid = 0;
+                                }
+                        } else {
+                                if (mother * daughter < 0) {
+                                        valid = 0;
+                                }
+                        }
+                }
+        } else if (ad != 16) {
+                /* Hadronic channel */
+        }
+
+        if (!valid) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "inconsistent values for mother (%d), daugther (%d) "
+                    "and mode (%d)", mother, daughter, mode);
+        }
+
         /* Decay an unpolarised tau in its rest frame. */
         for (;;) {
-                if ((rc = decay(pid, mode)) != ALOUETTE_RETURN_SUCCESS)
+                if ((rc = decay(mother, mode)) != ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (!isinf(products->P[0][0])) break;
         }
@@ -625,9 +686,12 @@ enum alouette_return alouette_undecay(int mode, int pid,
         int i = 0;
         double * pi;
         for (i = 0, pi = &products->P[0][0]; i < products->size; i++, pi += 4)
-                if (products->pid[i] == pid) break;
+                if (products->pid[i] == daughter) break;
+        if (i == products->size) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "no such daugther (%d) in decay products", daughter);
+        }
 
-        double weight = 1;
         if (polarisation_cb != NULL) {
                 const double * const hi = products->polarimeter;
                 const double h2 =
@@ -645,9 +709,7 @@ enum alouette_return alouette_undecay(int mode, int pid,
                         else if (cos_theta > 1.) cos_theta = 1.;
                         weight /= 1. + s * cos_theta;
 
-                        double norm = bias / sqrt(momentum[0] * momentum[0] +
-                            momentum[1] * momentum[1] +
-                            momentum[2] * momentum[2]);
+                        double norm = bias / sqrt(momentum2);
                         double u[3] = {momentum[0] * norm,
                             momentum[1] * norm, momentum[2] * norm};
                         if (rotate_direction(cos_theta, u) !=
@@ -675,19 +737,25 @@ enum alouette_return alouette_undecay(int mode, int pid,
         }
 
         /* Compute the parameters of the frame transform. */
+        const double mass2 = pi[3] * pi[3] - (pi[0] * pi[0] + pi[1] * pi[1] +
+            pi[2] * pi[2]);
+        const double mass = (mass2 > FLT_EPSILON) ? sqrt(mass2) : 0.;
         const double energy = sqrt(momentum[0] * momentum[0] +
-            momentum[1] * momentum[1] + momentum[2] * momentum[2]);
-        const double d = energy * pi[3] + momentum[0] * pi[0] +
-            momentum[1] * pi[1] + momentum[2] * pi[2];
-        const double ee = energy + pi[3];
-        const double gamma = ee * ee / d - 1.;
-        const double t0 = ee / d;
-        const double tau[3] = { t0 * (momentum[0] - pi[0]),
-                t0 * (momentum[1] - pi[1]), t0 * (momentum[2] - pi[2]) };
+            momentum[1] * momentum[1] + momentum[2] * momentum[2] +
+            mass * mass);
+        double beta[3] = {momentum[0] - pi[0], momentum[1] - pi[1],
+            momentum[2] - pi[2]};
+        const double gamma = 1. + (beta[0] * beta[0] + beta[1] * beta[1] +
+            beta[2] * beta[2]) / (momentum[0] * pi[0] + momentum[1] * pi[1] +
+            momentum[2] * pi[2] + energy * pi[3] + mass * mass);
+        const double t0 = (gamma + 1.) / (gamma * (energy + pi[3]));
+        int j;
+        for (j = 0; j < 3; j++) {
+                beta[j] *= -t0;
+        }
 
         /* Boost the daughters to the lab frame. */
         double Et = 0., Pt[3] = { 0., 0., 0. };
-        int j;
         double * pj;
         for (j = 0, pj = &products->P[0][0]; j < products->size; j++, pj += 4) {
                 if (j == i) {
@@ -700,13 +768,14 @@ enum alouette_return alouette_undecay(int mode, int pid,
                 }
 
                 /* Apply the boost and update the sum. */
-                const double ptau =
-                    pj[0] * tau[0] + pj[1] * tau[1] + pj[2] * tau[2];
-                const double tmp = ptau / (gamma + 1.) + pj[3];
-                pj[0] += tmp * tau[0];
-                pj[1] += tmp * tau[1];
-                pj[2] += tmp * tau[2];
-                pj[3] = gamma * pj[3] + ptau;
+                const double pbeta =
+                    pj[0] * beta[0] + pj[1] * beta[1] + pj[2] * beta[2];
+                const double tmp = gamma * (pbeta * gamma / (gamma + 1.)
+                    - pj[3]);
+                pj[0] += tmp * beta[0];
+                pj[1] += tmp * beta[1];
+                pj[2] += tmp * beta[2];
+                pj[3] = gamma * (pj[3] - pbeta);
                 Pt[0] += pj[0];
                 Pt[1] += pj[1];
                 Pt[2] += pj[2];
@@ -714,14 +783,15 @@ enum alouette_return alouette_undecay(int mode, int pid,
         }
 
         /* Set the backward Monte-Carlo weight. */
+        const double g1 = gamma + 1.;
+        const double ee = energy + pi[3];
         const double amtau = tauola_parmas.amtau;
-        weight *= amtau * amtau * amtau * fabs(t0 * t0 * gamma / energy);
+        weight *= amtau * amtau * amtau * gamma * g1 * g1 / (ee * ee * energy);
 
         /* Weight for the spin polarisation of the tau mother. */
-        const int tau_pid = pid > 0 ? 15 : -15;
         if (polarisation_cb != NULL) {
                 double pol[3];
-                polarisation_cb(tau_pid, Pt, pol);
+                polarisation_cb(mother, Pt, pol);
                 weight *= 1. + products->polarimeter[0] * pol[0] +
                     products->polarimeter[1] * pol[1] +
                     products->polarimeter[2] * pol[2];
@@ -731,7 +801,7 @@ enum alouette_return alouette_undecay(int mode, int pid,
          * ensure the conservation of the energy-momentum, the mother's 4
          * momentum has been computed from the boosted products.
          */
-        products->pid[i] = tau_pid;
+        products->pid[i] = mother;
         pi[0] = Pt[0];
         pi[1] = Pt[1];
         pi[2] = Pt[2];

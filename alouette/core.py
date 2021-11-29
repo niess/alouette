@@ -136,15 +136,19 @@ def _polarisation_callback(pid, momentum, polarisation):
     polarisation[0:3] = _polarisation(int(pid), m)
 
 
-def undecay(mode=None, pid=None, momentum=None, polarisation=None, bias=None):
+def undecay(mode=None, daughter=None, mother=None, momentum=None,
+    polarisation=None, bias=None):
     '''Backward Monte Carlo decay to a tau particle using tauola
     '''
 
     if mode is None:
         mode = 0
 
-    if pid is None:
-        pid = 16
+    if daughter is None:
+        daughter = 16
+
+    if mother is None:
+        mother = 0
 
     if momentum is None:
         momentum = ffi.new('double [3]', (0,0,0))
@@ -162,6 +166,7 @@ def undecay(mode=None, pid=None, momentum=None, polarisation=None, bias=None):
         bias = 0
 
     products = ffi.new('struct alouette_products *')
-    _call(lib.alouette_undecay, mode, pid, momentum, polar_cb, bias, products)
+    _call(lib.alouette_undecay, mode, daughter, mother, momentum, polar_cb,
+        bias, products)
 
     return Products(products)

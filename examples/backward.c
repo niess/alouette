@@ -9,7 +9,7 @@
 /* Tau longitudinal polariser. */
 static void polarise(int pid, const double momentum[3], double * polarisation)
 {
-        const double polar = 1.;
+        const double polar = -1.;
         double nrm = momentum[0] * momentum[0] + momentum[1] * momentum[1] +
             momentum[2] * momentum[2];
         if (nrm <= 0.) {
@@ -28,16 +28,18 @@ int main()
 {
         /* Randomise a few tau decays. */
         const int mode = 0;
-        const int pid = 16;
+        const int daughter = 16;
+        const int mother = 0;
         const double momentum[3] = { 0., 0., 1. };
 
         int i;
         for (i = 0; i < 3; i++) {
                 struct alouette_products products;
-                if (alouette_undecay(
-                    mode, pid, momentum, polarise, 0., &products) !=
-                    ALOUETTE_RETURN_SUCCESS)
-                        continue;
+                if (alouette_undecay(mode, daughter, mother, momentum,
+                    polarise, -1., &products) != ALOUETTE_RETURN_SUCCESS) {
+                        fprintf(stderr, "%s\n", alouette_message());
+                        exit(EXIT_FAILURE);
+                }
 
                 printf("# Event %d (%.5E) :\n", i + 1, products.weight);
                 int j;
