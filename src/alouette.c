@@ -48,6 +48,12 @@ extern struct {
     int jak1, jak2, jakp, jakm, ktom;
 } tauola_jaki;
 
+struct tauola_taukle {
+    float bra1, brk0, brk0b, brks;
+};
+
+extern struct tauola_taukle tauola_taukle;
+
 extern struct {
     float amtau, amnuta, amel, amnue, ammu, amnumu, ampiz, ampi, amro, gamro,
           ama1, gama1, amk, amkz, amkst, gamkst;
@@ -270,11 +276,32 @@ void tauola_random(float * r, int * n)
 
 /* Data relative to decay channels. */
 #define TAUOLA_MAX_CHANNELS 30
+#define N_CHANNELS 30 /* Effective number of channels */
+#define N_DAUGHTERS 13
 static struct {
         int n;
         double total_width;
-        double branching_ratio[TAUOLA_MAX_CHANNELS];
-} _channels;
+        double total_weight[N_DAUGHTERS];
+        int mode[N_CHANNELS];
+        int subchannel[N_CHANNELS];
+        double branching_ratio[N_CHANNELS];
+        double multiplicity[N_CHANNELS][N_DAUGHTERS];
+        double weight[N_CHANNELS][N_DAUGHTERS];
+        struct tauola_taukle default_taukle;
+} _channels = {0};
+
+/* Compute the array index for a given daughter pid. */
+static int daughter_index(int pid)
+{
+        const int pids[N_DAUGHTERS] = {11, -12, 13, -14, 16, 111, 211, -211,
+            221, 310, 130, 321, -321};
+
+        int i;
+        for (i = 0; i < N_DAUGHTERS; i++) {
+                if (pid == pids[i]) return i;
+        }
+        return -1;
+}
 
 /* Initialise TAUOLA and its wrapper. */
 enum alouette_return alouette_initialise(double * xk0dec)
@@ -292,7 +319,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
 
         /* Register a rally point in case of a TAUOLA error. */
         if (setjmp(alouette_context) != 0) {
-                return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
+                return message_error(ALOUETTE_RETURN_TAUOLA_ERROR, NULL);
         }
 
         /* TAUOLA common blocks and routines. */
@@ -365,12 +392,293 @@ enum alouette_return alouette_initialise(double * xk0dec)
                 _channels.branching_ratio[i] /= _channels.total_width;
         }
 
+        /* Backup the default BRs for subchannels. */
+        memcpy(&_channels.default_taukle, &tauola_taukle,
+            sizeof(struct tauola_taukle));
+
+        /* Set the daughter multiplicities, needed by the BMC algorithm.
+         *
+         * This is hardcoded, since TAUOLA does not seem to explicitly export
+         * this information.
+         */
+        if (tauola_taubra.nchan != 22) {
+                /* We expect the `new-currents` version of `tauola-fortran` to
+                 * be used. It includes 22 decay modes, with 4 channels
+                 * exhibiting sub-channels, i.e. for modes 5, 7, 15 and 22.
+                 */
+                return message_error(ALOUETTE_RETURN_TAUOLA_ERROR,
+                    "bad version of TAUOLA");
+        }
+
+        /* 1st mode: tau- -> nu_tau e- nu_e_bar */
+        _channels.mode[0] = 1;
+        const int i_nutau = daughter_index(16);
+        const int i_e = daughter_index(11);
+        const int i_nueb = daughter_index(-12);
+        _channels.multiplicity[0][i_nutau] = 1;
+        _channels.multiplicity[0][i_e] = 1;
+        _channels.multiplicity[0][i_nueb] = 1;
+
+        /* 2nd mode: tau- -> nu_tau mu- nu_mu_bar */
+        _channels.mode[1] = 2;
+        const int i_mu = daughter_index(13);
+        const int i_numub = daughter_index(-14);
+        _channels.multiplicity[1][i_nutau] = 1;
+        _channels.multiplicity[1][i_mu] = 1;
+        _channels.multiplicity[1][i_numub] = 1;
+
+        /* 3rd mode: tau- -> nu_tau pi- */
+        _channels.mode[2] = 3;
+        const int i_pim = daughter_index(-211);
+        _channels.multiplicity[2][i_nutau] = 1;
+        _channels.multiplicity[2][i_pim] = 1;
+
+        /* 4th mode: tau- -> nu_tau pi- pi0 */
+        _channels.mode[3] = 4;
+        const int i_pi0 = daughter_index(111);
+        _channels.multiplicity[3][i_nutau] = 1;
+        _channels.multiplicity[3][i_pim] = 1;
+        _channels.multiplicity[3][i_pi0] = 1;
+
+        /* 5th mode: tau- -> nu_tau a1 (2 sub-channels, 501 and 502) */
+        _channels.mode[4] = 5;
+        _channels.subchannel[4] = 1;
+        const int i_pip = daughter_index(211);
+        _channels.multiplicity[4][i_nutau] = 1;
+        _channels.multiplicity[4][i_pim] = 2;
+        _channels.multiplicity[4][i_pip] = 1;
+
+        _channels.mode[22] = 5;
+        _channels.subchannel[22] = 2;
+        _channels.multiplicity[22][i_nutau] = 1;
+        _channels.multiplicity[22][i_pi0] = 2;
+        _channels.multiplicity[22][i_pim] = 1;
+        _channels.branching_ratio[22] = _channels.branching_ratio[4] *
+            (1. - _channels.default_taukle.bra1);
+
+        _channels.branching_ratio[4] *= _channels.default_taukle.bra1;
+
+        /* 6th mode: tau- -> nu_tau K- */
+        _channels.mode[5] = 6;
+        const int i_km = daughter_index(-321);
+        _channels.multiplicity[5][i_nutau] = 1;
+        _channels.multiplicity[5][i_km] = 1;
+
+        /* 7th mode: tau- -> nu_tau K*- (3 sub-channels, 701, 702 and 703) */
+        _channels.mode[6] = 7;
+        _channels.subchannel[6] = 1;
+        const int i_ks = daughter_index(310);
+        _channels.multiplicity[6][i_nutau] = 1;
+        _channels.multiplicity[6][i_pim] = 1;
+        _channels.multiplicity[6][i_ks] = 1;
+
+        _channels.mode[23] = 7;
+        _channels.subchannel[23] = 2;
+        const int i_kl = daughter_index(130);
+        _channels.multiplicity[23][i_nutau] = 1;
+        _channels.multiplicity[23][i_pim] = 1;
+        _channels.multiplicity[23][i_kl] = 1;
+        _channels.branching_ratio[23] = _channels.branching_ratio[6] *
+            _channels.default_taukle.brks *
+            (1. - _channels.default_taukle.brk0);
+
+        _channels.mode[24] = 7;
+        _channels.subchannel[24] = 3;
+        _channels.multiplicity[24][i_nutau] = 1;
+        _channels.multiplicity[24][i_pi0] = 1;
+        _channels.multiplicity[24][i_pim] = 1;
+        _channels.branching_ratio[24] = _channels.branching_ratio[6] *
+            (1. - _channels.default_taukle.brks);
+
+        _channels.branching_ratio[6] *=
+            _channels.default_taukle.brks * _channels.default_taukle.brk0;
+
+        /* 8th mode: tau- -> nu_tau 2 pi- pi+ pi0 */
+        _channels.mode[7] = 8;
+        _channels.multiplicity[7][i_nutau] = 1;
+        _channels.multiplicity[7][i_pim] = 2;
+        _channels.multiplicity[7][i_pip] = 1;
+        _channels.multiplicity[7][i_pi0] = 1;
+
+        /* 9th mode: tau- -> nu_tau 3 pi0 pi- */
+        _channels.mode[8] = 9;
+        _channels.multiplicity[8][i_nutau] = 1;
+        _channels.multiplicity[8][i_pi0] = 3;
+        _channels.multiplicity[8][i_pim] = 1;
+
+        /* 10th mode: tau- -> nu_tau 2 pi- pi+ 2 pi0 */
+        _channels.mode[9] = 10;
+        _channels.multiplicity[9][i_nutau] = 1;
+        _channels.multiplicity[9][i_pim] = 2;
+        _channels.multiplicity[9][i_pip] = 1;
+        _channels.multiplicity[9][i_pi0] = 2;
+
+        /* 11th mode: tau- -> nu_tau 3 pi- 2 pi+ */
+        _channels.mode[10] = 11;
+        _channels.multiplicity[10][i_nutau] = 1;
+        _channels.multiplicity[10][i_pim] = 3;
+        _channels.multiplicity[10][i_pip] = 2;
+
+        /* 12th mode: tau- -> nu_tau 3 pi- 2 pi+ pi0 */
+        _channels.mode[11] = 12;
+        _channels.multiplicity[11][i_nutau] = 1;
+        _channels.multiplicity[11][i_pim] = 3;
+        _channels.multiplicity[11][i_pip] = 2;
+        _channels.multiplicity[11][i_pi0] = 1;
+
+        /* 13th mode: tau- -> nu_tau 2 pi- 1 pi+ 3 pi0 */
+        _channels.mode[12] = 13;
+        _channels.multiplicity[12][i_nutau] = 1;
+        _channels.multiplicity[12][i_pim] = 2;
+        _channels.multiplicity[12][i_pip] = 1;
+        _channels.multiplicity[12][i_pi0] = 3;
+
+        /* 14th mode: tau- -> nu_tau 2 pi- 1 pi+ 3 pi0 */
+        _channels.mode[13] = 14;
+        const int i_kp = daughter_index(321);
+        _channels.multiplicity[13][i_nutau] = 1;
+        _channels.multiplicity[13][i_km] = 1;
+        _channels.multiplicity[13][i_pim] = 1;
+        _channels.multiplicity[13][i_kp] = 1;
+
+        /* 15th mode: tau- -> nu_tau K0 pi- K0b (3 sub-channels, 1501, 1502 and
+         * 1503)
+         */
+        _channels.mode[14] = 15;
+        _channels.subchannel[14] = 1;
+        _channels.multiplicity[14][i_nutau] = 1;
+        _channels.multiplicity[14][i_ks] = 2;
+        _channels.multiplicity[14][i_pim] = 1;
+
+        _channels.mode[25] = 15;
+        _channels.subchannel[25] = 2;
+        _channels.multiplicity[25][i_nutau] = 1;
+        _channels.multiplicity[25][i_ks] = 1;
+        _channels.multiplicity[25][i_pim] = 1;
+        _channels.multiplicity[25][i_kl] = 1;
+        _channels.branching_ratio[25] = _channels.branching_ratio[14] * (
+            _channels.default_taukle.brk0 *
+            (1. - _channels.default_taukle.brk0b) +
+            (1. - _channels.default_taukle.brk0) *
+            _channels.default_taukle.brk0b);
+
+        _channels.mode[26] = 15;
+        _channels.subchannel[26] = 3;
+        _channels.multiplicity[26][i_nutau] = 1;
+        _channels.multiplicity[26][i_kl] = 2;
+        _channels.multiplicity[26][i_pim] = 1;
+        _channels.branching_ratio[26] = _channels.branching_ratio[14] *
+            (1. - _channels.default_taukle.brk0) *
+            (1. - _channels.default_taukle.brk0b);
+
+        _channels.branching_ratio[14] *=
+            _channels.default_taukle.brk0 * _channels.default_taukle.brk0b;
+
+        /* 16th mode: tau- -> nu_tau K- pi0 K0 (2 sub-channels, 1601 and
+         * 1602)
+         */
+        _channels.mode[15] = 16;
+        _channels.subchannel[15] = 1;
+        _channels.multiplicity[15][i_nutau] = 1;
+        _channels.multiplicity[15][i_km] = 1;
+        _channels.multiplicity[15][i_pi0] = 1;
+        _channels.multiplicity[15][i_ks] = 1;
+
+        _channels.mode[27] = 16;
+        _channels.subchannel[27] = 2;
+        _channels.multiplicity[27][i_nutau] = 1;
+        _channels.multiplicity[27][i_km] = 1;
+        _channels.multiplicity[27][i_pi0] = 1;
+        _channels.multiplicity[27][i_kl] = 1;
+        _channels.branching_ratio[27] = _channels.branching_ratio[15] *
+            (1. - _channels.default_taukle.brk0);
+
+        _channels.branching_ratio[15] *= _channels.default_taukle.brk0;
+
+        /* 17th mode: tau- -> nu_tau 2 pi0 K- */
+        _channels.mode[16] = 17;
+        _channels.multiplicity[17][i_nutau] = 1;
+        _channels.multiplicity[17][i_pi0] = 2;
+        _channels.multiplicity[17][i_km] = 1;
+
+        /* 18th mode: tau- -> nu_tau 2 K- pi- pi+ */
+        _channels.mode[17] = 18;
+        _channels.multiplicity[18][i_nutau] = 1;
+        _channels.multiplicity[18][i_km] = 1;
+        _channels.multiplicity[18][i_pim] = 1;
+        _channels.multiplicity[18][i_pip] = 1;
+
+        /* 19th mode: tau- -> nu_tau pi- K0 pi0 (2 sub-channels, 1901 and
+         * 1902)
+         */
+        _channels.mode[18] = 19;
+        _channels.subchannel[18] = 1;
+        _channels.multiplicity[18][i_nutau] = 1;
+        _channels.multiplicity[18][i_pim] = 1;
+        _channels.multiplicity[18][i_ks] = 1;
+        _channels.multiplicity[18][i_pi0] = 1;
+
+        _channels.mode[28] = 19;
+        _channels.subchannel[28] = 2;
+        _channels.multiplicity[28][i_nutau] = 1;
+        _channels.multiplicity[28][i_pim] = 1;
+        _channels.multiplicity[28][i_kl] = 1;
+        _channels.multiplicity[28][i_pi0] = 1;
+        _channels.branching_ratio[28] = _channels.branching_ratio[18] *
+            (1. - _channels.default_taukle.brk0);
+
+        _channels.branching_ratio[18] *= _channels.default_taukle.brk0;
+
+        /* 20th mode: tau- -> nu_tau rho pi- pi0 */
+        _channels.mode[19] = 20;
+        const int i_rho = daughter_index(221);
+        _channels.multiplicity[19][i_nutau] = 1;
+        _channels.multiplicity[19][i_rho] = 1;
+        _channels.multiplicity[19][i_pim] = 1;
+        _channels.multiplicity[19][i_pi0] = 1;
+
+        /* 21st mode: tau- -> nu_tau pi- pi0 gamma */
+        _channels.mode[20] = 21;
+        _channels.multiplicity[20][i_nutau] = 1;
+        _channels.multiplicity[20][i_pim] = 1;
+        _channels.multiplicity[20][i_pi0] = 1;
+
+        /* 22nd mode: tau- -> nu_tau K- K0 (2 sub-channels, 2201 and 2202 */
+        _channels.mode[21] = 22;
+        _channels.subchannel[21] = 1;
+        _channels.multiplicity[21][i_nutau] = 1;
+        _channels.multiplicity[21][i_km] = 1;
+        _channels.multiplicity[21][i_ks] = 1;
+
+        _channels.mode[29] = 22;
+        _channels.subchannel[29] = 2;
+        _channels.multiplicity[29][i_nutau] = 1;
+        _channels.multiplicity[29][i_km] = 1;
+        _channels.multiplicity[29][i_kl] = 1;
+        _channels.branching_ratio[29] = _channels.branching_ratio[21] *
+            (1. - _channels.default_taukle.brk0);
+
+        _channels.branching_ratio[21] *= _channels.default_taukle.brk0;
+
+        /* Compute the BMC sampling weights. */
+        for (i = 0; i < N_CHANNELS; i++) {
+                int j;
+                for (j = 0; j < N_DAUGHTERS; j++) {
+                        const double tmp = _channels.multiplicity[i][j] *
+                            _channels.branching_ratio[i];
+                        _channels.weight[i][j] = tmp;
+                        _channels.total_weight[j] += tmp;
+                }
+        }
+
         /* Flag as initialised and return. */
         _initialised = 1;
 
         return ALOUETTE_RETURN_SUCCESS;
 }
 #undef TAUOLA_MAX_CHANNELS
+#undef N_CHANNELS
+#undef N_DAUGHTERS
 
 /* Get the last (error) message(s). */
 const char * alouette_message(void)
@@ -390,13 +698,96 @@ const char * alouette_message(void)
         }
 }
 
+/* Low level routine for sub decay channels */
+static enum alouette_return subchannel_check_and_configure(int mode, int sub)
+{
+        memcpy(&tauola_taukle, &_channels.default_taukle,
+            sizeof(struct tauola_taukle));
+
+        if (sub) {
+                if (mode == 5) {
+                        if (sub == 1) {
+                                tauola_taukle.bra1 = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.bra1 = 0.;
+                        } else {
+                                return ALOUETTE_RETURN_VALUE_ERROR;
+                        }
+                } else if (mode == 7) {
+                        if (sub == 1) {
+                                tauola_taukle.brks = 1.;
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.brks = 1.;
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        } else if (sub == 3) {
+                                tauola_taukle.brks = 0.;
+                        } else {
+                                return ALOUETTE_RETURN_VALUE_ERROR;
+                        }
+                } else if (mode == 15) {
+                        if (sub == 1) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 0.;
+                        } else if (sub == 3) {
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        } else {
+                                return ALOUETTE_RETURN_VALUE_ERROR;
+                        }
+                } else if ((mode == 16) || (mode == 19) || (mode == 22)) {
+                        if (sub == 1) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        } else {
+                                return ALOUETTE_RETURN_VALUE_ERROR;
+                        }
+                } else {
+                        return ALOUETTE_RETURN_VALUE_ERROR;
+                }
+        }
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
+/* Low level routine for decay mode */
+static enum alouette_return mode_check(int * mode_ptr)
+{
+        int mode, sub;
+        if (*mode_ptr >= 100) {
+                mode = *mode_ptr / 100;
+                sub = *mode_ptr - 100 * mode;
+        } else {
+                mode = *mode_ptr;
+                sub = 0;
+        }
+
+        if ((mode < 0) || (mode > _channels.n) ||
+            (subchannel_check_and_configure(mode, sub) !=
+                ALOUETTE_RETURN_SUCCESS)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad decay mode (%d)", *mode_ptr);
+        } else {
+                *mode_ptr = mode;
+                return ALOUETTE_RETURN_SUCCESS;
+        }
+}
+
 /* Low level decay routine with TAUOLA. */
 static enum alouette_return decay(
     int pid, int mode, struct alouette_products * products)
 {
         /* Register a rally point in case of a TAUOLA error. */
         if (setjmp(alouette_context) != 0) {
-                return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
+                return message_error(ALOUETTE_RETURN_TAUOLA_ERROR, NULL);
         }
 
         tauola_jaki.jak1 = mode;
@@ -550,10 +941,9 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                 message_reset();
         }
 
-        /* Check the decay mode. */
-        if ((mode < 0) || (mode > _channels.n)) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad decay mode (%d)", mode);
+        /* Parse and check the decay mode. */
+        if ((rc = mode_check(&mode)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         /* Check the mother pid */
@@ -664,10 +1054,10 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                     momentum2);
         }
 
-        /* Check the decay mode */
-        if ((mode < 0) || (mode > _channels.n)) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad decay mode (%d)", mode);
+        /* Parse and check the decay mode. */
+        int mode_ = mode;
+        if ((rc = mode_check(&mode_)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         /* Check the mother PID */
@@ -686,7 +1076,7 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
         double weight = 1;
         int valid = 1;
         const int ad = abs(daughter);
-        int mother_ = mother, mode_ = mode;
+        int mother_ = mother;
         if (((ad >= 11) & (ad <= 14)) || (ad == 16)) {
                 if (ad == 16) {
                         /* Inclusive nu_tau */
@@ -701,17 +1091,17 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                         /* Leptonic channel */
                         if ((ad == 11) || (ad == 12)) {
                                 /* Electron case */
-                                weight = _channels.branching_ratio[0];
                                 if (mode_ == 0) {
                                         mode_ = 1;
+                                        weight = _channels.branching_ratio[0];
                                 } else if (mode_ != 1) {
                                         valid = 0;
                                 }
                         } else {
                                 /* Muon case */
-                                weight = _channels.branching_ratio[1];
                                 if (mode_ == 0) {
                                         mode_ = 2;
+                                        weight = _channels.branching_ratio[1];
                                 } else if (mode_ != 2) {
                                         valid = 0;
                                 }

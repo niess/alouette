@@ -34,7 +34,7 @@ enum alouette_return {
         /** A floating point error occured. */
         ALOUETTE_RETURN_FLOATING_ERROR,
         /** A TAUOLA error occured. */
-        ALOUETTE_RETURN_TAULOA_ERROR,
+        ALOUETTE_RETURN_TAUOLA_ERROR,
         /** The number of ALOUETTE return codes.  */
         ALOUETTE_N_RETURNS
 };
