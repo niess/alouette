@@ -43,17 +43,6 @@
 #include <fenv.h>
 #endif
 
-/* Container for TAUOLA's decay products. */
-static struct alouette_products * _products;
-
-/* Stack for message(s) */
-static struct {
-#define MESSAGE_MAX_SIZE 1024
-        int size;
-        enum alouette_return code;
-        char data[];
-} _message = {0, ALOUETTE_RETURN_SUCCESS, {0x0}};
-
 /* Some TAUOLA common blocks and routine(s) */
 extern struct {
     int jak1, jak2, jakp, jakm, ktom;
@@ -66,24 +55,40 @@ extern struct {
 
 extern void tauola_decay(int * state, double polarimeter[4]);
 
-/* Jump buffer for calling back from a TAUOLA error. */
-static jmp_buf _jump_buffer;
+/* Jump buffer for calling back from a TAUOLA error.
+ *
+ * Note: setting this to static results in undefined behaviour.
+ */
+jmp_buf alouette_context;
 
 /* Jump back to the calling context from within TAUOLA, instead of issuing
  * a hard stop.
  */
 void tauola_stop(void)
 {
-        longjmp(_jump_buffer, 1);
+        longjmp(alouette_context, 1);
 }
+
+/* Stack for message(s) */
+static struct {
+#define MESSAGE_MAX_SIZE 1024
+        int size;
+        enum alouette_return code;
+        char data[];
+} _message = {0, ALOUETTE_RETURN_SUCCESS, {0x0}};
 
 /* Redirect TAUOLA printing to the message stack. */
 void tauola_print(const char * msg)
 {
+        if (_message.size >= MESSAGE_MAX_SIZE - 2) return;
+
         const char * prefix = (_message.size > 0) ? "\n" : "";
         _message.size += snprintf(_message.data + _message.size,
             MESSAGE_MAX_SIZE - _message.size - 1, "%s%s", prefix, msg);
 }
+
+/* Pointer to current decay products. */
+static struct alouette_products * _products = NULL;
 
 /* Callback for TAUOLA, used for retrieving decay products. */
 void tauola_filhep(int * n, int * status, int * pid, int * mother_first,
@@ -104,6 +109,14 @@ void tauola_filhep(int * n, int * status, int * pid, int * mother_first,
         _products->size++;
 }
 
+/* Utility function for reseting a products container. */
+static void products_reset(struct alouette_products * products)
+{
+        products->size = 0;
+        products->weight = 0.;
+        memset(products->polarimeter, 0x0, sizeof products->polarimeter);
+}
+
 /* Utility function for reseting the message stack. */
 static void message_reset(void)
 {
@@ -122,7 +135,7 @@ static enum alouette_return message_error(
                 va_list args;
                 va_start(args, fmt);
                 _message.size += vsnprintf(_message.data,
-                    MESSAGE_MAX_SIZE - 1 - _message.size, fmt, args);
+                    MESSAGE_MAX_SIZE - 1, fmt, args);
                 va_end(args);
         }
 
@@ -277,8 +290,8 @@ enum alouette_return alouette_initialise(double * xk0dec)
             FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW | FE_UNDERFLOW);
 #endif
 
-        /* Rally point in case of a TAUOLA error. */
-        if (setjmp(_jump_buffer) != 0) {
+        /* Register a rally point in case of a TAUOLA error. */
+        if (setjmp(alouette_context) != 0) {
                 return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
         }
 
@@ -378,15 +391,17 @@ const char * alouette_message(void)
 }
 
 /* Low level decay routine with TAUOLA. */
-static enum alouette_return decay(int pid, int mode)
+static enum alouette_return decay(
+    int pid, int mode, struct alouette_products * products)
 {
-        /* Register a rally in case of a TAUOLA error. */
-        if (setjmp(_jump_buffer) != 0) {
+        /* Register a rally point in case of a TAUOLA error. */
+        if (setjmp(alouette_context) != 0) {
                 return message_error(ALOUETTE_RETURN_TAULOA_ERROR, NULL);
         }
 
         tauola_jaki.jak1 = mode;
         tauola_jaki.jak2 = mode;
+        _products = products;
 
         /* Call TAUOLA's decay routine. */
         int type = (pid > 0) ? 1 : 2;
@@ -524,15 +539,24 @@ static enum alouette_return build_rotation(
 enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
     const double * polarisation, struct alouette_products * products)
 {
+        /* Initialise the products container. */
+        products_reset(products);
+
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
+        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS) {
                 return rc;
+        } else {
+                message_reset();
+        }
 
-        /* Initialise the products container. */
-        _products = products;
-        products->size = 0;
-        products->weight = 0.;
+        /* Check the decay mode. */
+        if ((mode < 0) || (mode > _channels.n)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad decay mode (%d)", mode);
+        }
+
+        /* Check the mother pid */
         if (abs(pid) != 15) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "bad pid for mother particle (%d)", pid);
@@ -540,7 +564,8 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 
         /* Decay a tau in its rest frame. */
         for (;;) {
-                if ((rc = decay(pid, mode)) != ALOUETTE_RETURN_SUCCESS)
+                if ((rc = decay(pid, mode, products)) !=
+                    ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (!isinf(products->P[0][0])) break;
         }
@@ -622,6 +647,9 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
     const double momentum[3], alouette_polarisation_cb * polarisation_cb,
     double bias, struct alouette_products * products)
 {
+        /* Initialise the products container. */
+        products_reset(products);
+
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
         if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
@@ -636,16 +664,19 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                     momentum2);
         }
 
+        /* Check the decay mode */
+        if ((mode < 0) || (mode > _channels.n)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad decay mode (%d)", mode);
+        }
+
         /* Check the mother PID */
         if (mother && (abs(mother) != 15)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad pid value for mother particle (%d)", mother);
         }
 
-        /* Initialise the products container. */
-        _products = products;
-        products->size = 0;
-        products->weight = 0.;
+        /* Check the bias value */
         if ((bias < -1.) || (bias > 1.)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad bias value (%g)", bias);
@@ -724,7 +755,8 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
 
         /* Decay an unpolarised tau in its rest frame. */
         for (;;) {
-                if ((rc = decay(mother, mode)) != ALOUETTE_RETURN_SUCCESS)
+                if ((rc = decay(mother, mode, products)) !=
+                    ALOUETTE_RETURN_SUCCESS)
                         return rc;
                 if (!isinf(products->P[0][0])) break;
         }

@@ -18,8 +18,10 @@ int main()
                 struct alouette_products products;
                 if (alouette_decay(
                     mode, pid, momentum, polarisation, &products) !=
-                    ALOUETTE_RETURN_SUCCESS)
-                        continue;
+                    ALOUETTE_RETURN_SUCCESS) {
+                        fprintf(stderr, "%s\n", alouette_message());
+                        exit(EXIT_FAILURE);
+                }
 
                 printf("# Event %d :\n", i + 1);
                 int j;
@@ -30,5 +32,5 @@ int main()
                 }
         }
 
-        return 0;
+        exit(EXIT_SUCCESS);
 }
