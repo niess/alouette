@@ -255,6 +255,14 @@ void tauola_random(float * r, int * n)
         }
 }
 
+/* Data relative to decay channels. */
+#define TAUOLA_MAX_CHANNELS 30
+static struct {
+        int n;
+        double total_width;
+        double branching_ratio[TAUOLA_MAX_CHANNELS];
+} _channels;
+
 /* Initialise TAUOLA and its wrapper. */
 enum alouette_return alouette_initialise(double * xk0dec)
 {
@@ -326,11 +334,30 @@ enum alouette_return alouette_initialise(double * xk0dec)
         memcpy(&_random_stream, &tmp_random, sizeof tmp_random);
         alouette_random = random;
 
+        /* Compute the branching ratios from TAUOLA's partial widths */
+        extern struct {
+                float gamprt[TAUOLA_MAX_CHANNELS];
+                int jlist[TAUOLA_MAX_CHANNELS];
+                int nchan;
+        } tauola_taubra;
+
+        _channels.n = tauola_taubra.nchan;
+        int i;
+        for (i = 0; i < _channels.n; i++) {
+                const double d = tauola_taubra.gamprt[i];
+                _channels.total_width += d;
+                _channels.branching_ratio[i] = d;
+        }
+        for (i = 0; i < _channels.n; i++) {
+                _channels.branching_ratio[i] /= _channels.total_width;
+        }
+
         /* Flag as initialised and return. */
         _initialised = 1;
 
         return ALOUETTE_RETURN_SUCCESS;
 }
+#undef TAUOLA_MAX_CHANNELS
 
 /* Get the last (error) message(s). */
 const char * alouette_message(void)
@@ -628,40 +655,57 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
         double weight = 1;
         int valid = 1;
         const int ad = abs(daughter);
+        int mother_ = mother, mode_ = mode;
         if (((ad >= 11) & (ad <= 14)) || (ad == 16)) {
-                /* Leptonic channel or inclusive nu_tau */
-                if (mother == 0) {
-                        mother = (daughter > 0) ? 15 : -15;
-                }
-
                 if (ad == 16) {
-                        if (mother * daughter < 0) {
+                        /* Inclusive nu_tau */
+                        if (mother_ == 0) {
+                                mother_ = (daughter > 0) ? 15 : -15;
+                        }
+
+                        if (mother_ * daughter < 0) {
                                 valid = 0;
                         }
                 } else {
+                        /* Leptonic channel */
                         if ((ad == 11) || (ad == 12)) {
                                 /* Electron case */
-                                if (mode == 0) {
-                                        mode = 1;
-                                } else if (mode != 1) {
+                                weight = _channels.branching_ratio[0];
+                                if (mode_ == 0) {
+                                        mode_ = 1;
+                                } else if (mode_ != 1) {
                                         valid = 0;
                                 }
                         } else {
                                 /* Muon case */
-                                if (mode == 0) {
-                                        mode = 2;
-                                } else if (mode != 2) {
+                                weight = _channels.branching_ratio[1];
+                                if (mode_ == 0) {
+                                        mode_ = 2;
+                                } else if (mode_ != 2) {
                                         valid = 0;
                                 }
                         }
 
-                        if ((ad % 2) == 0) {
-                                if (mother * daughter > 0) {
-                                        valid = 0;
-                                }
-                        } else {
-                                if (mother * daughter < 0) {
-                                        valid = 0;
+                        if (valid) {
+                                /* Check the mother */
+                                if (mother_ == 0) {
+                                        if ((ad % 2) == 0) {
+                                                mother_ = (daughter > 0) ?
+                                                    -15 : 15;
+                                        } else {
+                                                mother_ = (daughter > 0) ?
+                                                    15 : -15;
+                                        }
+                                } else {
+                                        if ((ad % 2) == 0) {
+                                                if (mother_ * daughter > 0) {
+                                                        valid = 0;
+                                                }
+                                        } else {
+                                                if (mother_ * daughter < 0) {
+                                                        valid = 0;
+                                                }
+                                        }
                                 }
                         }
                 }
@@ -669,7 +713,10 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                 /* Hadronic channel */
         }
 
-        if (!valid) {
+        if (valid) {
+                mode = mode_;
+                mother = mother_;
+        } else {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "inconsistent values for mother (%d), daugther (%d) "
                     "and mode (%d)", mother, daughter, mode);
@@ -797,15 +844,24 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                     products->polarimeter[2] * pol[2];
         }
 
-        /* Replace the daughter particle with the tau mother. In order to
-         * ensure the conservation of the energy-momentum, the mother's 4
-         * momentum has been computed from the boosted products.
+        /* Insert the tau mother at top of the stack and remove the initial
+         * daughter. In order to ensure the conservation of the energy-momentum,
+         * the mother's 4 momentum has been re-computed from the boosted
+         * products.
          */
-        products->pid[i] = mother;
-        pi[0] = Pt[0];
-        pi[1] = Pt[1];
-        pi[2] = Pt[2];
-        pi[3] = Et;
+        for (j = 0; j < i; j++) {
+                const int ii = i - j;
+                products->pid[ii] = products->pid[ii - 1];
+                memcpy(&products->P[ii][0], &products->P[ii - 1][0],
+                    4 * sizeof(products->P[0][0]));
+        }
+
+        products->pid[0] = mother;
+        products->P[0][0] = Pt[0];
+        products->P[0][1] = Pt[1];
+        products->P[0][2] = Pt[2];
+        products->P[0][3] = Et;
+
         products->weight = weight;
 
         return ALOUETTE_RETURN_SUCCESS;
