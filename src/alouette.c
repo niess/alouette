@@ -303,6 +303,251 @@ static int daughter_index(int pid)
         return -1;
 }
 
+/* Converse (anti)particle. */
+static int daughter_converse(int pid)
+{
+        if ((pid == 111) || (pid == 221) || (pid == 310) || (pid == 130)) {
+                return pid;
+        } else {
+                return -pid;
+        }
+}
+
+static enum alouette_return channel_parse(int * mode_ptr, int * sub_ptr)
+{
+        int mode, sub;
+        if (*mode_ptr >= 100) {
+                mode = *mode_ptr / 100;
+                sub = *mode_ptr - 100 * mode;
+        } else {
+                mode = *mode_ptr;
+                sub = 0;
+        }
+        *sub_ptr = sub;
+
+        if ((mode < 0) || (mode > _channels.n)) {
+            goto error;
+        }
+
+        if (sub) {
+                if ((mode == 5) || (mode == 16) || (mode == 19) ||
+                    (mode == 22)) {
+                        if ((sub != 1) && (sub != 2)) {
+                                goto error;
+                        }
+                } else if ((mode == 7) || (mode == 15)) {
+                        if ((sub < 1) || (sub > 3)) {
+                                goto error;
+                        }
+                } else {
+                        goto error;
+                }
+        }
+
+        *mode_ptr = mode;
+
+        return ALOUETTE_RETURN_SUCCESS;
+
+error:
+        return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+            "bad decay mode (%d)", *mode_ptr);
+}
+
+/* Low level routine for configuring decay channels. */
+static void channel_configure(int mode, int sub)
+{
+        memcpy(&tauola_taukle, &_channels.default_taukle,
+            sizeof(struct tauola_taukle));
+
+        if (sub) {
+                if (mode == 5) {
+                        if (sub == 1) {
+                                tauola_taukle.bra1 = 1.;
+                        } else {
+                                tauola_taukle.bra1 = 0.;
+                        }
+                } else if (mode == 7) {
+                        if (sub == 1) {
+                                tauola_taukle.brks = 1.;
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.brks = 1.;
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        } else {
+                                tauola_taukle.brks = 0.;
+                        }
+                } else if (mode == 15) {
+                        if (sub == 1) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else if (sub == 2) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 0.;
+                        } else {
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        }
+                } else if ((mode == 16) || (mode == 19) || (mode == 22)) {
+                        if (sub == 1) {
+                                tauola_taukle.brk0 = 1.;
+                                tauola_taukle.brk0b = 1.;
+                        } else {
+                                tauola_taukle.brk0 = 0.;
+                                tauola_taukle.brk0b = 0.;
+                        }
+                }
+        }
+}
+
+/* Select a decay channel in forward Monte Carlo. */
+static enum alouette_return channel_select_forward(int * mode_ptr)
+{
+        enum alouette_return rc;
+        int sub;
+        if ((rc = channel_parse(mode_ptr, &sub)) == ALOUETTE_RETURN_SUCCESS) {
+                channel_configure(*mode_ptr, sub);
+        }
+        return rc;
+}
+
+/* Select a decay channel for the BMC procedure. */
+static enum alouette_return channel_select_backward(int daughter,
+    int * mode_ptr, int * mother_ptr, int * multiplicity_ptr,
+    double * weight_ptr)
+{
+        int converse = daughter_converse(daughter);
+        int id = daughter_index(daughter);
+        int ic = daughter_index(converse);
+
+        if ((id < 0) && (ic < 0)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad daughter pid (%d)", daughter);
+        }
+
+        int mode = *mode_ptr, sub;
+        enum alouette_return rc;
+        if ((rc = channel_parse(&mode, &sub)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
+        }
+
+        int candidates[N_CHANNELS];
+        int n_candidates = 0;
+        if (mode == 0) {
+                int i;
+                for (i = 0; i < N_CHANNELS; i++) {
+                        candidates[i] = i;
+                }
+                n_candidates = N_CHANNELS;
+        } else if (mode == 5) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 4;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 22;
+        } else if (mode == 7) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 6;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 23;
+                if ((!sub) || (sub == 3)) candidates[n_candidates++] = 24;
+        } else if (mode == 15) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 14;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 25;
+                if ((!sub) || (sub == 3)) candidates[n_candidates++] = 26;
+        } else if (mode == 16) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 15;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 27;
+        } else if (mode == 19) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 18;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 28;
+        } else if (mode == 22) {
+                if ((!sub) || (sub == 1)) candidates[n_candidates++] = 21;
+                if ((!sub) || (sub == 2)) candidates[n_candidates++] = 29;
+        } else {
+                candidates[0] = mode - 1;
+                n_candidates = 1;
+        }
+
+        /* Compute the total weight */
+        int mother = *mother_ptr;
+        double total_weight = 0.;
+        if ((id >= 0) && ((mother == 0) || (mother == 15))) {
+                int i;
+                for (i = 0; i < n_candidates; i++) {
+                        const int ii = candidates[i];
+                        total_weight += _channels.weight[ii][id];
+                }
+        }
+        if ((ic >= 0) && ((mother == 0) || (mother == -15))) {
+                int i;
+                for (i = 0; i < n_candidates; i++) {
+                        const int ii = candidates[i];
+                        total_weight += _channels.weight[ii][id];
+                }
+        }
+
+        if (total_weight == 0.) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "inconsistent values for mother (%d), daugther (%d) "
+                    "and mode (%d)", mother, daughter, mode);
+        }
+
+        /* Select the decay channel */
+        double r;
+        if (n_candidates == 1) {
+                r = 0.;
+        } else {
+                r = alouette_random();
+                if (r < 0) r = 0.;
+                else if (r > 1) r = 1.;
+                r *= total_weight;
+        }
+
+        double w = 0.;
+        int channel = -1, multiplicity = 0;
+        if ((id >= 0) && ((mother == 0) || (mother == 15))) {
+                int i;
+                for (i = 0; i < n_candidates; i++) {
+                        const int ii = candidates[i];
+                        w += _channels.weight[ii][id];
+                        if (r <= w) {
+                                *mother_ptr = 15;
+                                channel = ii;
+                                multiplicity =
+                                     _channels.multiplicity[ii][id];
+                                break;
+                        }
+                }
+        }
+        if ((channel == -1) && (ic >= 0) &&
+            ((mother == 0) || (mother == -15))) {
+                int i;
+                for (i = 0; i < n_candidates; i++) {
+                        const int ii = candidates[i];
+                        w += _channels.weight[ii][id];
+                        if (r <= w) {
+                                *mother_ptr = -15;
+                                channel = ii;
+                                multiplicity =
+                                     _channels.multiplicity[ii][ic];
+                                break;
+                        }
+                }
+        }
+
+        *mode_ptr = _channels.mode[channel];
+        sub = _channels.subchannel[channel];
+        channel_configure(*mode_ptr, sub);
+        *multiplicity_ptr = multiplicity;
+
+        double norm = 0.;
+        int i;
+        for (i = 0; i < n_candidates; i++) {
+                const int ii = candidates[i];
+                norm += _channels.branching_ratio[ii];
+        }
+        *weight_ptr = total_weight / norm; /* XXX Check normalisation */
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
 /* Initialise TAUOLA and its wrapper. */
 enum alouette_return alouette_initialise(double * xk0dec)
 {
@@ -407,7 +652,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
                  * exhibiting sub-channels, i.e. for modes 5, 7, 15 and 22.
                  */
                 return message_error(ALOUETTE_RETURN_TAUOLA_ERROR,
-                    "bad version of TAUOLA");
+                    "bad TAUOLA version");
         }
 
         /* 1st mode: tau- -> nu_tau e- nu_e_bar */
@@ -629,11 +874,11 @@ enum alouette_return alouette_initialise(double * xk0dec)
 
         _channels.branching_ratio[18] *= _channels.default_taukle.brk0;
 
-        /* 20th mode: tau- -> nu_tau rho pi- pi0 */
+        /* 20th mode: tau- -> nu_tau eta pi- pi0 */
         _channels.mode[19] = 20;
-        const int i_rho = daughter_index(221);
+        const int i_eta = daughter_index(221);
         _channels.multiplicity[19][i_nutau] = 1;
-        _channels.multiplicity[19][i_rho] = 1;
+        _channels.multiplicity[19][i_eta] = 1;
         _channels.multiplicity[19][i_pim] = 1;
         _channels.multiplicity[19][i_pi0] = 1;
 
@@ -695,89 +940,6 @@ const char * alouette_message(void)
                 }
         } else {
                 return _message.data;
-        }
-}
-
-/* Low level routine for sub decay channels */
-static enum alouette_return subchannel_check_and_configure(int mode, int sub)
-{
-        memcpy(&tauola_taukle, &_channels.default_taukle,
-            sizeof(struct tauola_taukle));
-
-        if (sub) {
-                if (mode == 5) {
-                        if (sub == 1) {
-                                tauola_taukle.bra1 = 1.;
-                        } else if (sub == 2) {
-                                tauola_taukle.bra1 = 0.;
-                        } else {
-                                return ALOUETTE_RETURN_VALUE_ERROR;
-                        }
-                } else if (mode == 7) {
-                        if (sub == 1) {
-                                tauola_taukle.brks = 1.;
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
-                        } else if (sub == 2) {
-                                tauola_taukle.brks = 1.;
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
-                        } else if (sub == 3) {
-                                tauola_taukle.brks = 0.;
-                        } else {
-                                return ALOUETTE_RETURN_VALUE_ERROR;
-                        }
-                } else if (mode == 15) {
-                        if (sub == 1) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
-                        } else if (sub == 2) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 0.;
-                        } else if (sub == 3) {
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
-                        } else {
-                                return ALOUETTE_RETURN_VALUE_ERROR;
-                        }
-                } else if ((mode == 16) || (mode == 19) || (mode == 22)) {
-                        if (sub == 1) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
-                        } else if (sub == 2) {
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
-                        } else {
-                                return ALOUETTE_RETURN_VALUE_ERROR;
-                        }
-                } else {
-                        return ALOUETTE_RETURN_VALUE_ERROR;
-                }
-        }
-
-        return ALOUETTE_RETURN_SUCCESS;
-}
-
-/* Low level routine for decay mode */
-static enum alouette_return mode_check(int * mode_ptr)
-{
-        int mode, sub;
-        if (*mode_ptr >= 100) {
-                mode = *mode_ptr / 100;
-                sub = *mode_ptr - 100 * mode;
-        } else {
-                mode = *mode_ptr;
-                sub = 0;
-        }
-
-        if ((mode < 0) || (mode > _channels.n) ||
-            (subchannel_check_and_configure(mode, sub) !=
-                ALOUETTE_RETURN_SUCCESS)) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad decay mode (%d)", *mode_ptr);
-        } else {
-                *mode_ptr = mode;
-                return ALOUETTE_RETURN_SUCCESS;
         }
 }
 
@@ -942,14 +1104,14 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
 
         /* Parse and check the decay mode. */
-        if ((rc = mode_check(&mode)) != ALOUETTE_RETURN_SUCCESS) {
+        if ((rc = channel_select_forward(&mode)) != ALOUETTE_RETURN_SUCCESS) {
                 return rc;
         }
 
         /* Check the mother pid */
         if (abs(pid) != 15) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad pid for mother particle (%d)", pid);
+                    "bad mother pid (%d)", pid);
         }
 
         /* Decay a tau in its rest frame. */
@@ -1050,20 +1212,14 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
             momentum[1] * momentum[1] + momentum[2] * momentum[2];
         if (momentum2 < FLT_EPSILON) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad momentum value for daugther particle (%g)",
+                    "bad daughter momentum (%g)",
                     momentum2);
-        }
-
-        /* Parse and check the decay mode. */
-        int mode_ = mode;
-        if ((rc = mode_check(&mode_)) != ALOUETTE_RETURN_SUCCESS) {
-                return rc;
         }
 
         /* Check the mother PID */
         if (mother && (abs(mother) != 15)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                        "bad pid value for mother particle (%d)", mother);
+                        "bad mother pid (%d)", mother);
         }
 
         /* Check the bias value */
@@ -1072,75 +1228,13 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                         "bad bias value (%g)", bias);
         }
 
-        /* XXX Select the decay mode. */
-        double weight = 1;
-        int valid = 1;
-        const int ad = abs(daughter);
-        int mother_ = mother;
-        if (((ad >= 11) & (ad <= 14)) || (ad == 16)) {
-                if (ad == 16) {
-                        /* Inclusive nu_tau */
-                        if (mother_ == 0) {
-                                mother_ = (daughter > 0) ? 15 : -15;
-                        }
-
-                        if (mother_ * daughter < 0) {
-                                valid = 0;
-                        }
-                } else {
-                        /* Leptonic channel */
-                        if ((ad == 11) || (ad == 12)) {
-                                /* Electron case */
-                                if (mode_ == 0) {
-                                        mode_ = 1;
-                                        weight = _channels.branching_ratio[0];
-                                } else if (mode_ != 1) {
-                                        valid = 0;
-                                }
-                        } else {
-                                /* Muon case */
-                                if (mode_ == 0) {
-                                        mode_ = 2;
-                                        weight = _channels.branching_ratio[1];
-                                } else if (mode_ != 2) {
-                                        valid = 0;
-                                }
-                        }
-
-                        if (valid) {
-                                /* Check the mother */
-                                if (mother_ == 0) {
-                                        if ((ad % 2) == 0) {
-                                                mother_ = (daughter > 0) ?
-                                                    -15 : 15;
-                                        } else {
-                                                mother_ = (daughter > 0) ?
-                                                    15 : -15;
-                                        }
-                                } else {
-                                        if ((ad % 2) == 0) {
-                                                if (mother_ * daughter > 0) {
-                                                        valid = 0;
-                                                }
-                                        } else {
-                                                if (mother_ * daughter < 0) {
-                                                        valid = 0;
-                                                }
-                                        }
-                                }
-                        }
-                }
-        } else if (ad != 16) {
-                /* Hadronic channel */
-        }
-
-        if (valid) {
-                mode = mode_;
-                mother = mother_;
-        } else {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "inconsistent values for mother (%d), daugther (%d) "
-                    "and mode (%d)", mother, daughter, mode);
+        /* Select the decay mode. */
+        double weight = 1.;
+        int multiplicity = 1;
+        if ((rc = channel_select_backward(
+            daughter, &mode, &mother, &multiplicity, &weight)) !=
+                ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         /* Decay an unpolarised tau in its rest frame. */
@@ -1152,10 +1246,20 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
         }
 
         /* Get the daughter's index. */
+        int idx;
+        if (multiplicity > 1) {
+                idx = (int)(multiplicity * alouette_random());
+                if (idx < 0) idx = 0;
+                else if (idx >= multiplicity) idx = multiplicity - 1;
+        } else {
+                idx = 0;
+        }
         int i = 0;
         double * pi;
         for (i = 0, pi = &products->P[0][0]; i < products->size; i++, pi += 4)
-                if (products->pid[i] == daughter) break;
+                if (products->pid[i] == daughter) {
+                        if (idx-- == 0) break;
+                }
         if (i == products->size) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "no such daugther (%d) in decay products", daughter);
