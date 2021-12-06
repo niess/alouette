@@ -16,7 +16,7 @@ class Products:
 
     def __repr__(self):
         return f'{type(self).__name__}(size={self.size}, pid={self.pid}, '     \
-            f'polarimetric={self.polarimetric}, P={self.P})'
+            f'polarimeter={self.polarimeter}, P={self.P})'
 
     @property
     def P(self):
@@ -42,15 +42,15 @@ class Products:
             return self._pid
 
     @property
-    def polarimetric(self):
-        '''Polarimetric vector of the decay
+    def polarimeter(self):
+        '''Polarimeter vector of the decay
         '''
         try:
-            return self._polarimetric
+            return self._polarimeter
         except AttributeError:
-            self._polarimetric = numpy.frombuffer(
-                ffi.buffer(self._c.polarimetric)[:])
-            return self._polarimetric
+            self._polarimeter = numpy.frombuffer(
+                ffi.buffer(self._c.polarimeter)[:])
+            return self._polarimeter
 
     @property
     def size(self):
@@ -102,7 +102,6 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
 
     if mode is None:
         mode = 0
-    # XXX Allow a list of mode(s) ?
 
     if pid is None:
         pid = 15
@@ -136,16 +135,16 @@ def _polarisation_callback(pid, momentum, polarisation):
     polarisation[0:3] = _polarisation(int(pid), m)
 
 
-def undecay(mode=None, daughter=None, mother=None, momentum=None,
-    polarisation=None, bias=None):
+def undecay(mode=None, pid=None, mother=None, momentum=None, polarisation=None,
+            bias=None):
     '''Backward Monte Carlo decay to a tau particle using tauola
     '''
 
     if mode is None:
         mode = 0
 
-    if daughter is None:
-        daughter = 16
+    if pid is None:
+        pid = 16
 
     if mother is None:
         mother = 0
@@ -166,7 +165,7 @@ def undecay(mode=None, daughter=None, mother=None, momentum=None,
         bias = 0
 
     products = ffi.new('struct alouette_products *')
-    _call(lib.alouette_undecay, mode, daughter, mother, momentum, polar_cb,
-        bias, products)
+    _call(lib.alouette_undecay, mode, pid, mother, momentum, polar_cb, bias,
+          products)
 
     return Products(products)

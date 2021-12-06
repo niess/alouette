@@ -143,7 +143,7 @@ typedef void alouette_polarisation_cb(
  * Perform a backward Monte-Carlo tau decay.
  *
  * @param mode            The tau decay mode, or `0` for any.
- * @param daughter        The PDG ID of the daughter decaying product,
+ * @param pid             The PDG ID of the particle to backward decay,
  *                        e.g. `16` for a tau neutrino.
  * @param mother          The PDG ID of the mother particle,
  *                        or `0` for any valid mother.
@@ -156,18 +156,18 @@ typedef void alouette_polarisation_cb(
  * code is returned as detailed below.
  *
  * Simulate a backward tau decay from a given decay product. The spin
- * polarisation of the primary tau can be provided a posteriori. Set
- * *polarisation* to `NULL` in order to ignore spin effects.
+ * polarisation of the primary tau can be provided a posteriori as a callback.
+ * Set *polarisation* to `NULL` in order to ignore spin effects.
  *
  * The spin *bias* parameters allows to control the biasing of the angular
  * distribution of decay products in the mother's rest frame. It must be in the
  * range [-1, 1]. It is expected to be a hint on the mother's longitudinal spin
- * polarisation. Thus, typically -1 for a &tau;^(-) or +1 for a &tau;^(+). Set
- * the bias to zero if the spin polarization is a priori unknown.
+ * polarisation. Thus, it is typically -1 for a &tau;^(-) or +1 for a &tau;^(+).
+ * Set the bias to zero if the spin polarization is a priori unknown.
  *
  * __Error codes__
  *
- *     ALOUETTE_RETURN_VALUE_ERROR       The provided *pid* is not valid.
+ *     ALOUETTE_RETURN_VALUE_ERROR       Some input parameter is not valid.
  *
  *     ALOUETTE_RETURN_FLOATING_ERROR    A floating point error occured.
  *
@@ -175,7 +175,7 @@ typedef void alouette_polarisation_cb(
  */
 enum alouette_return alouette_undecay(
     int mode,
-    int daughter,
+    int pid,
     int mother,
     const double momentum[3],
     alouette_polarisation_cb * polarisation,
