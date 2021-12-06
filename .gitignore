@@ -1,6 +1,8 @@
 alouette/version.py
 bin
 build
+.coverage
+htmlcov
 lib
 *.o
 *.pyc

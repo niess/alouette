@@ -18,6 +18,12 @@ class Products:
         return f'{type(self).__name__}(size={self.size}, pid={self.pid}, '     \
             f'polarimeter={self.polarimeter}, P={self.P})'
 
+    def __eq__(self, other):
+        try:
+            return ffi.buffer(self._c) == ffi.buffer(other._c)
+        except AttributeError:
+            return False
+
     @property
     def P(self):
         '''Four momenta of the N decay products as an N x 4 numpy array
@@ -109,11 +115,17 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
     if momentum is None:
         momentum = ffi.new('double [3]', (0,0,0))
     else:
+        if not isinstance(momentum, (list, tuple)):
+            momentum = tuple(momentum)
         momentum = ffi.new('double [3]', momentum)
 
     if polarisation is None:
         polarisation = ffi.NULL
     else:
+        # XXX Allow float for longitudinal polarisation ?
+        # XXX Improve type check and forward type errors
+        if not isinstance(polarisation, (list, tuple)):
+            polarisation = tuple(polarisation)
         polarisation = ffi.new('double [3]', polarisation)
 
     products = ffi.new('struct alouette_products *')
@@ -152,6 +164,8 @@ def undecay(mode=None, pid=None, mother=None, momentum=None, polarisation=None,
     if momentum is None:
         momentum = ffi.new('double [3]', (0,0,0))
     else:
+        if not isinstance(momentum, (list, tuple)):
+            momentum = tuple(momentum)
         momentum = ffi.new('double [3]', momentum)
 
     if polarisation is None:

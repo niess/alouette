@@ -548,12 +548,17 @@ static enum alouette_return channel_select_backward(int daughter,
         return ALOUETTE_RETURN_SUCCESS;
 }
 
+/* Status flag for TAUOLA initialisation */
+static int _tauola_initialised = 0;
+
 /* Initialise TAUOLA and its wrapper. */
 enum alouette_return alouette_initialise(double * xk0dec)
 {
-        static int _initialised = 0;
         message_reset();
-        if (_initialised) return ALOUETTE_RETURN_SUCCESS;
+        if (_tauola_initialised) {
+                return message_error(ALOUETTE_RETURN_TAUOLA_ERROR,
+                    "TAUOLA already initialised");
+        }
 
 #ifdef ALOUETTE_DEBUG
         /* Enable floating point exceptions. */
@@ -578,13 +583,15 @@ enum alouette_return alouette_initialise(double * xk0dec)
                  * CPC 70 (1992) 69-76.
                  */
                 tauola_taurad.itdkrc = 1;
-                tauola_taurad.xk0dec = 0.001;
+                tauola_taurad.xk0dec = 1E-03;
         } else if (*xk0dec > 0.) {
                 tauola_taurad.itdkrc = 1;
                 tauola_taurad.xk0dec = *xk0dec;
         } else {
                 tauola_taurad.itdkrc = 0;
-                tauola_taurad.xk0dec = 0.;
+                tauola_taurad.xk0dec = 1E-03; /* Setting to 0 results in FP
+                                               * errors in TAUOLA fortran.
+                                               */
         }
 
         /* PDG identifier for tau. */
@@ -917,7 +924,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
         }
 
         /* Flag as initialised and return. */
-        _initialised = 1;
+        _tauola_initialised = 1;
 
         return ALOUETTE_RETURN_SUCCESS;
 }
@@ -1097,11 +1104,13 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS) {
-                return rc;
-        } else {
-                message_reset();
+        if (!_tauola_initialised) {
+                if ((rc = alouette_initialise(NULL)) !=
+                    ALOUETTE_RETURN_SUCCESS) {
+                        return rc;
+                }
         }
+        message_reset();
 
         /* Parse and check the decay mode. */
         if ((rc = channel_select_forward(&mode)) != ALOUETTE_RETURN_SUCCESS) {
@@ -1174,12 +1183,17 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                 momentum[1] / amtau, momentum[2] / amtau };
         const double gamma =
             sqrt(1. + tau[0] * tau[0] + tau[1] * tau[1] + tau[2] * tau[2]);
-        rc = ALOUETTE_RETURN_SUCCESS;
-        if (gamma <= 1. + FLT_EPSILON) return rc;
+        products->weight = 1.;
+        if (gamma <= 1. + FLT_EPSILON) {
+                return ALOUETTE_RETURN_SUCCESS;
+        }
 
+        const double energy = gamma * amtau;
+        double Psum[4] = {momentum[0], momentum[1], momentum[2], energy};
         int i;
         double * P;
-        for (i = 0, P = &products->P[0][0]; i < products->size; i++, P += 4) {
+        for (i = 0, P = &products->P[0][0]; i < products->size - 1;
+            i++, P += 4) {
                 /* Apply the boost. */
                 const double ptau =
                     P[0] * tau[0] + P[1] * tau[1] + P[2] * tau[2];
@@ -1188,10 +1202,16 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                 P[1] += tmp * tau[1];
                 P[2] += tmp * tau[2];
                 P[3] = gamma * P[3] + ptau;
-        }
-        products->weight = 1.;
 
-        return rc;
+                int j;
+                for (j = 0; j < 4; j++) Psum[j] -= P[j];
+        }
+
+        /* Set last daughter using energy-momentum conservation. */
+        int j;
+        for (j = 0; j < 4; j++) P[j] = Psum[j];
+
+        return ALOUETTE_RETURN_SUCCESS;
 }
 
 /* Backward decay from a tau neutrino to a tau. */
@@ -1204,8 +1224,13 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
 
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
-        if ((rc = alouette_initialise(NULL)) != ALOUETTE_RETURN_SUCCESS)
-                return rc;
+        if (!_tauola_initialised) {
+                if ((rc = alouette_initialise(NULL)) !=
+                    ALOUETTE_RETURN_SUCCESS) {
+                        return rc;
+                }
+        }
+        message_reset();
 
         /* Check zero momentum */
         const double momentum2 = momentum[0] * momentum[0] +
