@@ -1,4 +1,7 @@
 #! /bin/bash
+# Exit on error
+set -e
+
 PYTHON=${PYTHON:-python3}
 TESTS=${TESTS:-$(ls tests/test_*.py)}
 

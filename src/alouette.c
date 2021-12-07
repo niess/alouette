@@ -80,7 +80,7 @@ static struct {
 #define MESSAGE_MAX_SIZE 1024
         int size;
         enum alouette_return code;
-        char data[];
+        char data[MESSAGE_MAX_SIZE];
 } _message = {0, ALOUETTE_RETURN_SUCCESS, {0x0}};
 
 /* Redirect TAUOLA printing to the message stack. */

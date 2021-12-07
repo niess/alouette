@@ -105,7 +105,8 @@ libdir:
 
 .PHONY: clean
 clean:
-	rm -rf bin build lib alouette/libalouette.*
+	rm -rf bin build lib alouette/libalouette.* alouette/_core.abi3.*
+	rm -rf alouette/__pycache__ tests/__pycache__
 
 .PHONY: dist-clean
 dist-clean:
