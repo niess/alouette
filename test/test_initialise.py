@@ -3,8 +3,7 @@ import pytest
 
 
 def test_initialise():
-    '''Test explicit initialisation
-    '''
+    '''Test explicit initialisation'''
 
     # Check that the PRNG is preserved
     alouette.random.set(12345)
@@ -14,8 +13,8 @@ def test_initialise():
     alouette.random()
 
     alouette.core.initialise()
-    assert(alouette.random.seed == 12345)
-    assert(alouette.random() == u1)
+    assert alouette.random.seed == 12345
+    assert alouette.random() == u1
 
     # Check re-initialisation error
     with pytest.raises(RuntimeError) as e:

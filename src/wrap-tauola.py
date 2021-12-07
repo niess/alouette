@@ -7,17 +7,16 @@ from typing import Union
 
 @dataclass
 class FortranEntity:
-    '''Data for a fortran subroutine or function
-    '''
+    '''Data for a fortran subroutine or function'''
+
     name: str
     category: str
-    content: Union[str,list]
+    content: Union[str, list]
     called: bool = False
 
 
 def wrap(sources, includes, outfile):
-    '''Wrap TAUOLA as a fortran routine
-    '''
+    '''Wrap TAUOLA as a fortran routine'''
 
     code = []
 
@@ -39,22 +38,22 @@ def wrap(sources, includes, outfile):
                 head, tail = content.split('COMPLEX', 1)
                 head, tail = tail.split('REAL', 1)
                 head = re.sub(r'[&\n ]', '', head)
-                functions_type['COMPLEX'] = [
-                    x.upper() for x in head.split(',')]
+                functions_type['COMPLEX'] = [x.upper() for x in head.split(',')]
 
                 head, tail = tail.split('DOUBLE PRECISION', 1)
                 head = re.sub(r'[&\n ]', '', head)
-                functions_type['REAL'] = [
-                    x.upper() for x in head.split(',')]
+                functions_type['REAL'] = [x.upper() for x in head.split(',')]
 
                 tail = re.sub(r'[&\n ]', '', tail)
                 functions_type['DOUBLE PRECISION'] = [
-                    x.upper() for x in tail.split(',')]
+                    x.upper() for x in tail.split(',')
+                ]
 
                 content = ''
             content = os.linesep + content + os.linesep
-            code = re.sub(r"\n\s*include\s*'\S*" + name + r"'\s*\n",
-                content, code)
+            code = re.sub(
+                r"\n\s*include\s*'\S*" + name + r"'\s*\n", content, code
+            )
 
     # Map routines, functions etc.
     lines = code.split(os.linesep)
@@ -73,23 +72,25 @@ def wrap(sources, includes, outfile):
             else:
                 r = re.match(
                     r'(?m)^\s+(?:'
-                        r'SUBROUTINE|'
-                        r'FUNCTION|'
-                        r'REAL FUNCTION|'
-                        r'DOUBLE PRECISION FUNCTION|'
-                        r'COMPLEX FUNCTION|'
-                        r'COMPLEX[*]16 FUNCTION)'
-                        r'\s+([^(]+)',
+                    r'SUBROUTINE|'
+                    r'FUNCTION|'
+                    r'REAL FUNCTION|'
+                    r'DOUBLE PRECISION FUNCTION|'
+                    r'COMPLEX FUNCTION|'
+                    r'COMPLEX[*]16 FUNCTION)'
+                    r'\s+([^(]+)',
                     line,
-                    re.IGNORECASE)
+                    re.IGNORECASE,
+                )
                 if r:
                     content = [line]
                 elif 'SUBROUTINE' in line:
                     previous = line
 
             if r:
-                category = 'FUNCTION' if 'FUNCTION' in line.upper() \
-                    else 'SUBROUTINE'
+                category = (
+                    'FUNCTION' if 'FUNCTION' in line.upper() else 'SUBROUTINE'
+                )
                 entity = FortranEntity(r[1].strip(), category, content)
         else:
             entity.content.append(line)
@@ -127,8 +128,9 @@ def wrap(sources, includes, outfile):
         blocks = set({})
         lines = entity.content
         for i, line in enumerate(lines):
-            r = re.match(r'(?m)^\s+COMMON\s*/\s*([^\s]+)\s*/',
-                line, re.IGNORECASE)
+            r = re.match(
+                r'(?m)^\s+COMMON\s*/\s*([^\s]+)\s*/', line, re.IGNORECASE
+            )
             if r:
                 blocks.add(r.group(1))
 
@@ -137,12 +139,18 @@ def wrap(sources, includes, outfile):
             for index, line in enumerate(lines):
                 if index == 0:
                     continue
-                if (len(line) < 6) or ((line[0] != ' ') and (line[0] != '\t')) \
-                    or (line[5] != ' '):
+                if (
+                    (len(line) < 6)
+                    or ((line[0] != ' ') and (line[0] != '\t'))
+                    or (line[5] != ' ')
+                ):
                     continue
-                r = re.match(r'(?m)^\s+(?:CHARACTER|COMMON|COMPLEX|DATA|'
-                             r'DOUBLE|EXTERNAL|INTEGER|PARAMETER|REAL|SAVE)',
-                        line, re.IGNORECASE)
+                r = re.match(
+                    r'(?m)^\s+(?:CHARACTER|COMMON|COMPLEX|DATA|'
+                    r'DOUBLE|EXTERNAL|INTEGER|PARAMETER|REAL|SAVE)',
+                    line,
+                    re.IGNORECASE,
+                )
                 if r:
                     started = True
                 elif started:
@@ -153,7 +161,8 @@ def wrap(sources, includes, outfile):
             for block in blocks:
                 lines.insert(
                     index,
-                    f"      BIND(C,NAME='tauola_{block.lower()}') /{block}/")
+                    f"      BIND(C,NAME='tauola_{block.lower()}') /{block}/",
+                )
                 index += 1
             lines.insert(index, '!')
 
@@ -168,8 +177,9 @@ def wrap(sources, includes, outfile):
             if re.search(depname + '\s*[(]', content, re.IGNORECASE):
                 # This is a direct call
                 deps.append(depname)
-            elif re.search(r'GAUS2?[(]' + depname + r'\s*,',
-                content, re.IGNORECASE):
+            elif re.search(
+                r'GAUS2?[(]' + depname + r'\s*,', content, re.IGNORECASE
+            ):
                 # This case is a function argument to GAUS or GAUS2 integrator
                 deps.append(depname)
 
@@ -177,23 +187,32 @@ def wrap(sources, includes, outfile):
         lines = content.split(os.linesep)
         for i, line in enumerate(lines):
             newline = line
-            if re.match(r'(?m)^\s+(?:COMPLEX|DOUBLE PRECISION|'
-                r'EXTERNAL|REAL)[*]?[0-9]*', line, re.IGNORECASE):
+            if re.match(
+                r'(?m)^\s+(?:COMPLEX|DOUBLE PRECISION|'
+                r'EXTERNAL|REAL)[*]?[0-9]*',
+                line,
+                re.IGNORECASE,
+            ):
                 newline += '%'
                 for depname in deps:
-                    if (depname == entity.name) or \
-                       (entities[depname].category == 'SUBROUTINE'):
+                    if (depname == entity.name) or (
+                        entities[depname].category == 'SUBROUTINE'
+                    ):
                         continue
-                    newline = re.sub(depname + r'\s*[,%]', '',
-                        newline, re.IGNORECASE)
+                    newline = re.sub(
+                        depname + r'\s*[,%]', '', newline, re.IGNORECASE
+                    )
 
                 if newline[-1] == '%':
                     newline = newline[:-1]
 
                 if newline != line:
-                    if re.search(r'(?:COMPLEX|DOUBLE PRECISION|'
+                    if re.search(
+                        r'(?:COMPLEX|DOUBLE PRECISION|'
                         r'EXTERNAL|REAL)[*]?[0-9 ]*$',
-                        newline, re.IGNORECASE):
+                        newline,
+                        re.IGNORECASE,
+                    ):
                         newline = ''
                     else:
                         newline = re.sub(',\s*$', '', newline)
@@ -216,7 +235,8 @@ def wrap(sources, includes, outfile):
     # Redirect hard STOPs
     for entity in entities.values():
         entity.content = re.sub(
-            r'(?:STOP|stop)\s*\n', 'CALL TAUOLA_STOP()\n', entity.content)
+            r'(?:STOP|stop)\s*\n', 'CALL TAUOLA_STOP()\n', entity.content
+        )
 
     # Redirect printing
     for entity in entities.values():
@@ -231,21 +251,20 @@ def wrap(sources, includes, outfile):
             r = re.match(r'(?m)^[\s0-9]+FORMAT', line, re.IGNORECASE)
             if r:
                 label = int(line[1:6])
-                formats[label] = line[r.end()+1:-1]
+                formats[label] = line[r.end() + 1 : -1]
                 check_cont = True
                 lines[i] = '!' + line[1:]
                 continue
             elif check_cont:
                 if (len(line) >= 6) and (line[5] != ' '):
-                    formats[label] = "''" # Suppress long lines
+                    formats[label] = "''"  # Suppress long lines
                     lines[i] = '!' + line[1:]
                 else:
                     check_cont, label = False, None
 
         # Prune formats
         def prune_format(fmt):
-            '''Prune a fortran format string
-            '''
+            '''Prune a fortran format string'''
             if fmt != "''":
                 fmt = fmt.split(',')
                 for i, v in enumerate(fmt):
@@ -267,20 +286,19 @@ def wrap(sources, includes, outfile):
         for i, line in enumerate(lines):
             if line and (line[0] != ' '):
                 continue
-            r = re.match(
-                r'(?m)^[\s0-9]+(?:PRINT|WRITE)', line, re.IGNORECASE)
+            r = re.match(r'(?m)^[\s0-9]+(?:PRINT|WRITE)', line, re.IGNORECASE)
             if r:
-                prefix, suffix = line[:r.end()-5], line[r.end():]
-                command = line[r.end()-5:r.end()].upper()
+                prefix, suffix = line[: r.end() - 5], line[r.end() :]
+                command = line[r.end() - 5 : r.end()].upper()
                 if command == 'WRITE':
                     m = re.match(r"\s*[(][^,]*,'[^']+'", suffix)
                     if m:
-                        args = prune_format(suffix[m.end()+1:])
+                        args = prune_format(suffix[m.end() + 1 :])
                     else:
                         m = re.match(r"\s*[(][^,]*,([^)]+)[)]", suffix)
                         label = m.group(1)
                         if label == '*':
-                            args = prune_format(suffix[m.end()+1:])
+                            args = prune_format(suffix[m.end() + 1 :])
                         else:
                             try:
                                 label = int(label)
@@ -291,7 +309,7 @@ def wrap(sources, includes, outfile):
                     m = re.match(r'\s*([^,]+)', suffix)
                     label = m.group(1)
                     if label == '*':
-                        args = prune_format(suffix[m.end()+1:])
+                        args = prune_format(suffix[m.end() + 1 :])
                     else:
                         label = int(label)
                         args = formats[label]
@@ -299,11 +317,22 @@ def wrap(sources, includes, outfile):
                 if args != "''":
                     args = args + '//CHAR(0)'
                     if len(args) > 57 - len(prefix):
-                        args = os.linesep + '     $' + \
-                            (len(prefix) - 4) * ' ' + args
+                        args = (
+                            os.linesep
+                            + '     $'
+                            + (len(prefix) - 4) * ' '
+                            + args
+                        )
 
-                lines[i] = prefix + 'CALL TAUOLA_PRINT(' + args + ')' + \
-                    os.linesep + '!' + line[1:]
+                lines[i] = (
+                    prefix
+                    + 'CALL TAUOLA_PRINT('
+                    + args
+                    + ')'
+                    + os.linesep
+                    + '!'
+                    + line[1:]
+                )
                 check_cont = True
                 continue
             elif check_cont:
@@ -316,35 +345,38 @@ def wrap(sources, includes, outfile):
     # Patch SIGEE declaration in SIGOLD
     if 'SIGOLD' in entities:
         entity = entities['SIGOLD']
-        entity.content = re.sub(r'(?m)^[ ]+FUNCTION SIGOLD.*?\n',
-'''
+        entity.content = re.sub(
+            r'(?m)^[ ]+FUNCTION SIGOLD.*?\n',
+            '''
       FUNCTION SIGOLD(Q2,JNPI)
       REAL*4 SIGEE
 ''',
-        entity.content)
+            entity.content,
+        )
 
     # Externalise the random engine (RANMAR)
     entity = entities['RANMAR']
-    entity.content = (
-'''
+    entity.content = '''
       SUBROUTINE RANMAR(RVEC,LENV)
       DIMENSION RVEC(*)
       CALL TAUOLA_RANDOM(RVEC,LENV)
       END SUBROUTINE RANMAR
-''')
+'''
 
     # Dummy frame transform since decays are in the center of mass frame
-    entities['TRALO4'] = FortranEntity('TRALO4', 'ROUTINE',
-'''
+    entities['TRALO4'] = FortranEntity(
+        'TRALO4',
+        'ROUTINE',
+        '''
       SUBROUTINE TRALO4(KTO,P,Q,AMS)
       INTEGER KTO
       REAL*4 P(4),Q(4),AMS
       END SUBROUTINE TRALO4
-'''
+''',
     )
 
     code = [
-f'''!     ==================================================================
+        f'''!     ==================================================================
 !     This is a C-library compliant re-distribution of TAUOLA
 !
 !     The original FORTRAN code is available from the tauolapp website:
@@ -391,15 +423,17 @@ f'''!     ==================================================================
         CALL DEKAY(KTO,HX)
       ENDIF
       CONTAINS
-''']
+'''
+    ]
 
     for k, v in entities.items():
         code.append(v.content)
 
     code.append(
-'''
+        '''
       END SUBROUTINE TAUOLA_DECAY
-''')
+'''
+    )
 
     # Prune lines and remap suppressed printing
     lines = os.linesep.join(code).split(os.linesep)
@@ -409,9 +443,11 @@ f'''!     ==================================================================
         line = re.sub('^\t', 8 * ' ', line)
         line = re.sub('\t', 2 * ' ', line)
         line = re.sub(r' +$', '', line)
-        line = re.sub(r"TAUOLA_PRINT[(]''[)]",
+        line = re.sub(
+            r"TAUOLA_PRINT[(]''[)]",
             f"TAUOLA_PRINT(' tauola.f:{i + 1}: (suppressed)'//CHAR(0))",
-            line)
+            line,
+        )
         if line:
             new.append(line)
             i += 1
@@ -424,12 +460,13 @@ f'''!     ==================================================================
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Wrap TAUOLA source files.')
-    parser.add_argument('-s', dest='sources', nargs='+',
-        help='source files')
-    parser.add_argument('-i', dest='includes', nargs='*',
-        help='include file(s)')
-    parser.add_argument('-w', dest='outfile', default='tauola.f',
-        help='wrapper file')
+    parser.add_argument('-s', dest='sources', nargs='+', help='source files')
+    parser.add_argument(
+        '-i', dest='includes', nargs='*', help='include file(s)'
+    )
+    parser.add_argument(
+        '-w', dest='outfile', default='tauola.f', help='wrapper file'
+    )
     args = parser.parse_args()
 
     wrap(args.sources, args.includes, args.outfile)

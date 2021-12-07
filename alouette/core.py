@@ -15,8 +15,10 @@ class Products:
         self._c = c_struct
 
     def __repr__(self):
-        return f'{type(self).__name__}(size={self.size}, pid={self.pid}, '     \
+        return (
+            f'{type(self).__name__}(size={self.size}, pid={self.pid}, '
             f'polarimeter={self.polarimeter}, P={self.P})'
+        )
 
     def __eq__(self, other):
         try:
@@ -26,63 +28,60 @@ class Products:
 
     @property
     def P(self):
-        '''Four momenta of the N decay products as an N x 4 numpy array
-        '''
+        '''Four momenta of the N decay products as an N x 4 numpy array'''
         try:
             return self._P
         except AttributeError:
             n = self._c.size
-            self._P = numpy.frombuffer(
-                ffi.buffer(self._c.P)[:])[:4 * n].reshape((n, 4))
+            self._P = numpy.frombuffer(ffi.buffer(self._c.P)[:])[
+                : 4 * n
+            ].reshape((n, 4))
             return self._P
 
     @property
     def pid(self):
-        '''Particle IDs of the N decay products, using PDG numbering scheme
-        '''
+        '''Particle IDs of the N decay products, using PDG numbering scheme'''
         try:
             return self._pid
         except AttributeError:
-            self._pid = numpy.frombuffer(ffi.buffer(self._c.pid)[:],
-                dtype='i4')[:self._c.size]
+            self._pid = numpy.frombuffer(
+                ffi.buffer(self._c.pid)[:], dtype='i4'
+            )[: self._c.size]
             return self._pid
 
     @property
     def polarimeter(self):
-        '''Polarimeter vector of the decay
-        '''
+        '''Polarimeter vector of the decay'''
         try:
             return self._polarimeter
         except AttributeError:
             self._polarimeter = numpy.frombuffer(
-                ffi.buffer(self._c.polarimeter)[:])
+                ffi.buffer(self._c.polarimeter)[:]
+            )
             return self._polarimeter
 
     @property
     def size(self):
-        '''Number, N, of decay products
-        '''
+        '''Number, N, of decay products'''
         return int(self._c.size)
 
     @property
     def weight(self):
-        '''Monte Carlo weight of the decay
-        '''
+        '''Monte Carlo weight of the decay'''
         return float(self._c.weight)
 
 
 # Mapping between ALOUETTE exceptions codes and Python classes
 _index_to_exception = (
-        Exception,          # ALOUETTE_RETURN_SUCCESS
-        ValueError,         # ALOUETTE_RETURN_VALUE_ERROR
-        FloatingPointError, # ALOUETTE_RETURN_FLOATING_ERROR
-        RuntimeError        # ALOUETTE_RETURN_TAUOLA_ERROR
+    Exception,  # ALOUETTE_RETURN_SUCCESS
+    ValueError,  # ALOUETTE_RETURN_VALUE_ERROR
+    FloatingPointError,  # ALOUETTE_RETURN_FLOATING_ERROR
+    RuntimeError,  # ALOUETTE_RETURN_TAUOLA_ERROR
 )
 
 
 def _call(f, *args):
-    '''Library call with error check
-    '''
+    '''Library call with error check'''
     rc = f(*args)
     if rc != 0:
         exception = _index_to_exception[int(rc)]
@@ -91,8 +90,7 @@ def _call(f, *args):
 
 
 def initialise(xk0dec=None):
-    '''Initialise TAUOLA using custom settings
-    '''
+    '''Initialise TAUOLA using custom settings'''
 
     if xk0dec is None:
         xk0dec = ffi.NULL
@@ -103,8 +101,7 @@ def initialise(xk0dec=None):
 
 
 def decay(mode=None, pid=None, momentum=None, polarisation=None):
-    '''Decay a tau particle using tauola
-    '''
+    '''Decay a tau particle using tauola'''
 
     if mode is None:
         mode = 0
@@ -113,7 +110,7 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
         pid = 15
 
     if momentum is None:
-        momentum = ffi.new('double [3]', (0,0,0))
+        momentum = ffi.new('double [3]', (0, 0, 0))
     else:
         if not isinstance(momentum, (list, tuple)):
             momentum = tuple(momentum)
@@ -141,16 +138,20 @@ _polarisation = None
 
 @ffi.def_extern()
 def _polarisation_callback(pid, momentum, polarisation):
-    '''Callback wrapper, for setting the polarisation in backward decays
-    '''
+    '''Callback wrapper, for setting the polarisation in backward decays'''
     m = numpy.frombuffer(ffi.buffer(momentum, 24)[:])
     polarisation[0:3] = _polarisation(int(pid), m)
 
 
-def undecay(mode=None, pid=None, mother=None, momentum=None, polarisation=None,
-            bias=None):
-    '''Backward Monte Carlo decay to a tau particle using tauola
-    '''
+def undecay(
+    mode=None,
+    pid=None,
+    mother=None,
+    momentum=None,
+    polarisation=None,
+    bias=None,
+):
+    '''Backward Monte Carlo decay to a tau particle using tauola'''
 
     if mode is None:
         mode = 0
@@ -162,7 +163,7 @@ def undecay(mode=None, pid=None, mother=None, momentum=None, polarisation=None,
         mother = 0
 
     if momentum is None:
-        momentum = ffi.new('double [3]', (0,0,0))
+        momentum = ffi.new('double [3]', (0, 0, 0))
     else:
         if not isinstance(momentum, (list, tuple)):
             momentum = tuple(momentum)
@@ -179,7 +180,15 @@ def undecay(mode=None, pid=None, mother=None, momentum=None, polarisation=None,
         bias = 0
 
     products = ffi.new('struct alouette_products *')
-    _call(lib.alouette_undecay, mode, pid, mother, momentum, polar_cb, bias,
-          products)
+    _call(
+        lib.alouette_undecay,
+        mode,
+        pid,
+        mother,
+        momentum,
+        polar_cb,
+        bias,
+        products,
+    )
 
     return Products(products)

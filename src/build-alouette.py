@@ -18,12 +18,11 @@ def format_source(*paths):
     for path in paths:
         for prefix in INCLUDE_PATHS:
             if path.startswith(prefix):
-                pruned.append(path[len(prefix)+1:])
+                pruned.append(path[len(prefix) + 1 :])
                 break
     paths = pruned
 
-    source = os.linesep.join([
-        f'#include "{path}"' for path in paths])
+    source = os.linesep.join([f'#include "{path}"' for path in paths])
 
     return source
 
@@ -58,11 +57,14 @@ def load_headers(*paths):
 
 
 ffi = FFI()
-ffi.set_source('alouette._core', format_source(*HEADERS),
+ffi.set_source(
+    'alouette._core',
+    format_source(*HEADERS),
     include_dirs=[f'{PREFIX}/{path}' for path in INCLUDE_PATHS],
     library_dirs=(str(PREFIX / 'alouette'),),
     extra_link_args=(f'-Wl,-rpath,$ORIGIN/.',),
-    libraries=('alouette',))
+    libraries=('alouette',),
+)
 ffi.cdef(load_headers(*HEADERS))
 
 
