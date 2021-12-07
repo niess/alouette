@@ -1,12 +1,7 @@
-import alouette
 import numpy
 import pytest
-
-
-def almost_equal(a, b, epsilon=None):
-    '''Compare floats up to epsilon'''
-    epsilon = epsilon or 10 * numpy.finfo(numpy.float32).eps
-    assert pytest.approx(a, abs=epsilon) == pytest.approx(b, abs=epsilon)
+import alouette
+from .utils import almost_equal
 
 
 def test_undecay():

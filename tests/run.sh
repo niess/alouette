@@ -1,6 +1,6 @@
 #! /bin/bash
 PYTHON=${PYTHON:-python3}
-TESTS=${TESTS:-$(ls test/test_*.py)}
+TESTS=${TESTS:-$(ls tests/test_*.py)}
 
 coverage="$PYTHON -m coverage"
 

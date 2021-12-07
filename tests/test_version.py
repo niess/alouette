@@ -1,0 +1,7 @@
+from alouette import version
+
+
+def test_vesion():
+    '''Test the version sub-module'''
+    assert isinstance(version.VERSION, str)
+    assert isinstance(version.GIT_REVISION, str)

@@ -1,5 +1,5 @@
-import alouette
 import pytest
+import alouette
 
 
 def test_initialise():
@@ -17,5 +17,6 @@ def test_initialise():
     assert alouette.random() == u1
 
     # Check re-initialisation error
-    with pytest.raises(RuntimeError) as e:
+    with pytest.raises(RuntimeError) as exc_info:
         alouette.core.initialise(xk0dec=0)
+    assert 'TAUOLA already initialised' in exc_info.exconly()

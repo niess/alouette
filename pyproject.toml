@@ -2,3 +2,6 @@
 target_version = ['py36']
 line-length = 80
 skip-string-normalization = true
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = ['E0014', 'E0611', 'W0511', 'C0114']

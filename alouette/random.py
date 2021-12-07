@@ -4,13 +4,16 @@ __all__ = ('Random', 'random')
 
 
 class Random:
-    '''Proxy to ALOUETTE's Pseudo Random Numbers Generator (PRNG)'''
+    '''Wrapper for Alouette's Pseudo Random Numbers Generator (PRNG)'''
 
     @property
     def seed(self):
+        '''The PRNG current seed
+        '''
         return lib.alouette_random_seed()
 
-    def set(self, seed=None):
+    @staticmethod
+    def set(seed=None):
         '''Reset the state of the PRNG'''
         if seed is None:
             seed = ffi.NULL

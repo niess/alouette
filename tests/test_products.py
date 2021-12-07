@@ -1,6 +1,6 @@
-import alouette
 import numpy
 import pytest
+import alouette
 
 
 def test_products():

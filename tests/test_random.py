@@ -28,5 +28,5 @@ def test_random():
     # Check the PRNG getter
     u = alouette.random()
     assert isinstance(u, float)
-    assert (u >= 0) and (u <= 1)
+    assert 0 <= u <= 1
     assert u != alouette.random()

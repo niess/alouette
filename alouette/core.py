@@ -1,5 +1,5 @@
-from ._core import ffi, lib
 import numpy
+from ._core import ffi, lib
 
 __all__ = ('decay', 'initialise', 'Products', 'undecay')
 
@@ -13,6 +13,9 @@ class Products:
 
     def __init__(self, c_struct):
         self._c = c_struct
+        self._P = None
+        self._pid = None
+        self._polarimeter = None
 
     def __repr__(self):
         return (
@@ -29,36 +32,30 @@ class Products:
     @property
     def P(self):
         '''Four momenta of the N decay products as an N x 4 numpy array'''
-        try:
-            return self._P
-        except AttributeError:
+        if self._P is None:
             n = self._c.size
             self._P = numpy.frombuffer(ffi.buffer(self._c.P)[:])[
                 : 4 * n
             ].reshape((n, 4))
-            return self._P
+        return self._P
 
     @property
     def pid(self):
         '''Particle IDs of the N decay products, using PDG numbering scheme'''
-        try:
-            return self._pid
-        except AttributeError:
+        if self._pid is None:
             self._pid = numpy.frombuffer(
                 ffi.buffer(self._c.pid)[:], dtype='i4'
             )[: self._c.size]
-            return self._pid
+        return self._pid
 
     @property
     def polarimeter(self):
         '''Polarimeter vector of the decay'''
-        try:
-            return self._polarimeter
-        except AttributeError:
+        if self._polarimeter is None:
             self._polarimeter = numpy.frombuffer(
                 ffi.buffer(self._c.polarimeter)[:]
             )
-            return self._polarimeter
+        return self._polarimeter
 
     @property
     def size(self):
@@ -119,8 +116,6 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
     if polarisation is None:
         polarisation = ffi.NULL
     else:
-        # XXX Allow float for longitudinal polarisation ?
-        # XXX Improve type check and forward type errors
         if not isinstance(polarisation, (list, tuple)):
             polarisation = tuple(polarisation)
         polarisation = ffi.new('double [3]', polarisation)
@@ -131,16 +126,15 @@ def decay(mode=None, pid=None, momentum=None, polarisation=None):
     return Products(products)
 
 
-'''User supplied polarisation callback, for backward decays
-'''
-_polarisation = None
+# User supplied polarisation callback, for backward decays
+_POLARISATION = None
 
 
 @ffi.def_extern()
 def _polarisation_callback(pid, momentum, polarisation):
     '''Callback wrapper, for setting the polarisation in backward decays'''
     m = numpy.frombuffer(ffi.buffer(momentum, 24)[:])
-    polarisation[0:3] = _polarisation(int(pid), m)
+    polarisation[0:3] = _POLARISATION(int(pid), m)
 
 
 def undecay(
@@ -149,7 +143,7 @@ def undecay(
     mother=None,
     momentum=None,
     polarisation=None,
-    bias=None,
+    bias=None
 ):
     '''Backward Monte Carlo decay to a tau particle using tauola'''
 
@@ -172,8 +166,8 @@ def undecay(
     if polarisation is None:
         polar_cb = ffi.NULL
     else:
-        global _polarisation
-        _polarisation = polarisation
+        global _POLARISATION
+        _POLARISATION = polarisation
         polar_cb = lib._polarisation_callback
 
     if bias is None:
