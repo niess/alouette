@@ -531,6 +531,12 @@ static enum alouette_return channel_select_backward(int daughter,
                         }
                 }
         }
+        if (channel == -1) {
+                /* This should not happen */
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "unexpected channel (mother = %d, daugther = %d "
+                    "and mode = %d)", mother, daughter, mode);
+        }
 
         *mode_ptr = _channels.mode[channel];
         sub = _channels.subchannel[channel];
