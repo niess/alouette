@@ -549,7 +549,7 @@ static enum alouette_return channel_select_backward(int daughter,
                 const int ii = candidates[i];
                 norm += _channels.branching_ratio[ii];
         }
-        *weight_ptr = total_weight / norm; /* XXX Check normalisation */
+        *weight_ptr = total_weight / (multiplicity * norm);
 
         return ALOUETTE_RETURN_SUCCESS;
 }
