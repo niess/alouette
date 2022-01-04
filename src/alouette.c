@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* The ALOUETTE API. */
+/* The Alouette API. */
 #include "alouette.h"
 
 #ifndef M_PI

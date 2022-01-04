@@ -68,7 +68,7 @@ class Products:
         return float(self._c.weight)
 
 
-# Mapping between ALOUETTE exceptions codes and Python classes
+# Mapping between Alouette exceptions codes and Python classes
 _index_to_exception = (
     Exception,  # ALOUETTE_RETURN_SUCCESS
     ValueError,  # ALOUETTE_RETURN_VALUE_ERROR

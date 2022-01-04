@@ -35,12 +35,12 @@ enum alouette_return {
         ALOUETTE_RETURN_FLOATING_ERROR,
         /** A TAUOLA error occured. */
         ALOUETTE_RETURN_TAUOLA_ERROR,
-        /** The number of ALOUETTE return codes.  */
+        /** The number of Alouette return codes.  */
         ALOUETTE_N_RETURNS
 };
 
 /**
- * Initialise TAUOLA and the ALOUETTE wrapper.
+ * Initialise TAUOLA and the Alouette wrapper.
  *
  * @param xk0dec  Factor for radiative corrections or `NULL`.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
@@ -65,7 +65,7 @@ enum alouette_return alouette_initialise(
  * Return the last (error) message(s).
  *
  * This function returns a string containing the last (error) message(s) issued
- * by TAUOLA, or by the ALOUETTE wrapper.
+ * by TAUOLA, or by the Alouette wrapper.
  */
 const char * alouette_message(void);
 
@@ -185,7 +185,7 @@ enum alouette_return alouette_undecay(
 /**
  * The library PRNG, uniform over (0,1).
  *
- * The ALOUETTE library uses a single random stream, replacing TAUOLA's `RANMAR`
+ * The Alouette library uses a single random stream, replacing TAUOLA's `RANMAR`
  * random engine with a Merseene Twister algorithm. The PRNG can be seeded with
  * the `alouette_random_seed_set` function. The current seed value is returned
  * by the `alouette_random_seed_get` function.
