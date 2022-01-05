@@ -383,8 +383,19 @@ static void channel_configure(int mode, int sub)
                                 tauola_taukle.brk0 = 1.;
                                 tauola_taukle.brk0b = 1.;
                         } else if (sub == 2) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 0.;
+                                const double p0 =
+                                    _channels.default_taukle.brk0 *
+                                    (1. - _channels.default_taukle.brk0b);
+                                const double p1 =
+                                    (1. - _channels.default_taukle.brk0) *
+                                    _channels.default_taukle.brk0b;
+                                if (alouette_random() * (p0 + p1) <= p0) {
+                                        tauola_taukle.brk0 = 1.;
+                                        tauola_taukle.brk0b = 0.;
+                                } else {
+                                        tauola_taukle.brk0 = 0.;
+                                        tauola_taukle.brk0b = 1.;
+                                }
                         } else {
                                 tauola_taukle.brk0 = 0.;
                                 tauola_taukle.brk0b = 0.;
