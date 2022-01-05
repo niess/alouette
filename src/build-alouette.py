@@ -8,9 +8,9 @@ import re
 
 PREFIX = Path(__file__).parent.parent.resolve()
 
-INCLUDE_PATHS = ('include',)
+INCLUDE_PATHS = ['include']
 
-HEADERS = ('include/alouette.h',)
+HEADERS = ['include/alouette.h']
 
 
 def format_source(*paths):
@@ -61,9 +61,9 @@ ffi.set_source(
     'alouette._core',
     format_source(*HEADERS),
     include_dirs=[f'{PREFIX}/{path}' for path in INCLUDE_PATHS],
-    library_dirs=(str(PREFIX / 'alouette'),),
-    extra_link_args=(f'-Wl,-rpath,$ORIGIN/.',),
-    libraries=('alouette',),
+    library_dirs=[str(PREFIX / 'alouette')],
+    extra_link_args=[f'-Wl,-rpath,$ORIGIN/.'],
+    libraries=['alouette'],
 )
 ffi.cdef(load_headers(*HEADERS))
 
