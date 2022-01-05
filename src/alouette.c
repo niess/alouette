@@ -485,7 +485,7 @@ static enum alouette_return channel_select_backward(int daughter,
 
         if (total_weight == 0.) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "inconsistent values for mother (%d), daugther (%d) "
+                    "inconsistent values for mother (%d), daughter (%d) "
                     "and mode (%d)", mother, daughter, mode);
         }
 
@@ -534,7 +534,7 @@ static enum alouette_return channel_select_backward(int daughter,
         if (channel == -1) {
                 /* This should not happen */
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "unexpected channel (mother = %d, daugther = %d "
+                    "unexpected channel (mother = %d, daughter = %d "
                     "and mode = %d)", mother, daughter, mode);
         }
 
@@ -1293,7 +1293,7 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
                 }
         if (i == products->size) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "no such daugther (%d) in decay products", daughter);
+                    "no such daughter (%d) in decay products", daughter);
         }
 
         if (polarisation_cb != NULL) {
