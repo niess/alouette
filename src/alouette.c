@@ -744,7 +744,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
         _channels.subchannel[24] = 3;
         _channels.multiplicity[24][i_nutau] = 1;
         _channels.multiplicity[24][i_pi0] = 1;
-        _channels.multiplicity[24][i_pim] = 1;
+        _channels.multiplicity[24][i_km] = 1;
         _channels.branching_ratio[24] = _channels.branching_ratio[6] *
             (1. - _channels.default_taukle.brks);
 
@@ -791,7 +791,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
         _channels.multiplicity[12][i_pip] = 1;
         _channels.multiplicity[12][i_pi0] = 3;
 
-        /* 14th mode: tau- -> nu_tau 2 pi- 1 pi+ 3 pi0 */
+        /* 14th mode: tau- -> nu_tau K- pi- K+ */
         _channels.mode[13] = 14;
         const int i_kp = daughter_index(321);
         _channels.multiplicity[13][i_nutau] = 1;
@@ -855,16 +855,16 @@ enum alouette_return alouette_initialise(double * xk0dec)
 
         /* 17th mode: tau- -> nu_tau 2 pi0 K- */
         _channels.mode[16] = 17;
-        _channels.multiplicity[17][i_nutau] = 1;
-        _channels.multiplicity[17][i_pi0] = 2;
-        _channels.multiplicity[17][i_km] = 1;
+        _channels.multiplicity[16][i_nutau] = 1;
+        _channels.multiplicity[16][i_pi0] = 2;
+        _channels.multiplicity[16][i_km] = 1;
 
         /* 18th mode: tau- -> nu_tau 2 K- pi- pi+ */
         _channels.mode[17] = 18;
-        _channels.multiplicity[18][i_nutau] = 1;
-        _channels.multiplicity[18][i_km] = 1;
-        _channels.multiplicity[18][i_pim] = 1;
-        _channels.multiplicity[18][i_pip] = 1;
+        _channels.multiplicity[17][i_nutau] = 1;
+        _channels.multiplicity[17][i_km] = 1;
+        _channels.multiplicity[17][i_pim] = 1;
+        _channels.multiplicity[17][i_pip] = 1;
 
         /* 19th mode: tau- -> nu_tau pi- K0 pi0 (2 sub-channels, 1901 and
          * 1902)
