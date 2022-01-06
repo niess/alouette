@@ -490,7 +490,7 @@ static enum alouette_return channel_select_backward(int daughter,
                 int i;
                 for (i = 0; i < n_candidates; i++) {
                         const int ii = candidates[i];
-                        total_weight += _channels.weight[ii][id];
+                        total_weight += _channels.weight[ii][ic];
                 }
         }
 
@@ -532,7 +532,7 @@ static enum alouette_return channel_select_backward(int daughter,
                 int i;
                 for (i = 0; i < n_candidates; i++) {
                         const int ii = candidates[i];
-                        w += _channels.weight[ii][id];
+                        w += _channels.weight[ii][ic];
                         if (r <= w) {
                                 *mother_ptr = -15;
                                 channel = ii;
