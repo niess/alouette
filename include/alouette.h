@@ -102,7 +102,7 @@ struct alouette_products {
  * be provided. If `ǸULL` spin effects are not simulated.
  *
  * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
- * then the decay mode is randomised over al available modes, according to
+ * then the decay mode is randomised over all available modes, according to
  * branching ratios.
  *
  * __Error codes__
@@ -129,10 +129,6 @@ enum alouette_return alouette_decay(
  *
  * In a backward decay, the spin polarisation of the tau mother is not known
  * a priori. The user can supply an a posteriori value with this callback.
- *
- * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
- * then the decay mode is randomised over al available modes, according to
- * branching ratios.
  */
 typedef void alouette_polarisation_cb(
     int pid,
@@ -158,6 +154,10 @@ typedef void alouette_polarisation_cb(
  * Simulate a backward tau decay from a given decay product. The spin
  * polarisation of the primary tau can be provided a posteriori as a callback.
  * Set *polarisation* to `NULL` in order to ignore spin effects.
+ *
+ * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
+ * then the decay mode is randomised over all available modes, according to
+ * branching ratios.
  *
  * The spin *bias* parameters allows to control the biasing of the angular
  * distribution of decay products in the mother's rest frame. It must be in the
