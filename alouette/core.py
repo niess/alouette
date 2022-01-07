@@ -1,4 +1,6 @@
 import numpy
+from numbers import Number
+
 from ._core import ffi, lib
 
 __all__ = ('decay', 'initialise', 'Products', 'undecay')
@@ -98,7 +100,7 @@ def initialise(xk0dec=None):
 
 
 def decay(mode=None, pid=None, momentum=None, polarisation=None):
-    '''Decay a tau particle using tauola'''
+    '''Forward Monte Carlo tau decay'''
 
     if mode is None:
         mode = 0
@@ -137,52 +139,71 @@ def _polarisation_callback(pid, momentum, polarisation):
     polarisation[0:3] = _POLARISATION(int(pid), m)
 
 
-def undecay(
-    mode=None,
-    pid=None,
-    mother=None,
-    momentum=None,
-    polarisation=None,
-    bias=None
-):
-    '''Backward Monte Carlo decay to a tau particle using tauola'''
+class undecay:
+    '''Backward Monte Carlo tau decay'''
 
-    if mode is None:
-        mode = 0
+    @property
+    def mother(self):
+        '''Mother particle(s) for backward decays'''
+        return int(lib.alouette_undecay_mother)
 
-    if pid is None:
-        pid = 16
+    @mother.setter
+    def mother(self, value):
+        if value not in (-15, 0, 15):
+            exc = ValueError if isinstance(value, Number) else TypeError
+            raise exc(
+                'bad mother pid. Must be one of 15 (tau-), -15 (tau+) or '
+                '0 (tau- or tau+)'
+            )
+        else:
+            lib.alouette_undecay_mother = value
 
-    if mother is None:
-        mother = 0
+    @property
+    def bias(self):
+        '''Tuning parameter for the spin bias in backward decays'''
+        return float(lib.alouette_undecay_bias)
 
-    if momentum is None:
-        momentum = ffi.new('double [3]', (0, 0, 0))
-    else:
-        if not isinstance(momentum, (list, tuple)):
-            momentum = tuple(momentum)
-        momentum = ffi.new('double [3]', momentum)
+    @bias.setter
+    def bias(self, value):
+        if (not isinstance(value, Number)) or (value < -1) or (value > 1):
+            exc = ValueError if isinstance(value, Number) else TypeError
+            raise exc('bad bias value. Must be within [-1, 1].')
+        else:
+            lib.alouette_undecay_bias = value
 
-    if polarisation is None:
-        polar_cb = ffi.NULL
-    else:
-        global _POLARISATION
-        _POLARISATION = polarisation
-        polar_cb = lib._polarisation_callback
+    def __call__(self, mode=None, pid=None, momentum=None, polarisation=None):
+        '''Perform a backward Monte Carlo decay'''
+        if mode is None:
+            mode = 0
 
-    if bias is None:
-        bias = 0
+        if pid is None:
+            pid = 16
 
-    products = ffi.new('struct alouette_products *')
-    _call(
-        lib.alouette_undecay,
-        mode,
-        pid,
-        mother,
-        momentum,
-        polar_cb,
-        bias,
-        products,
-    )
+        if momentum is None:
+            momentum = ffi.new('double [3]', (0, 0, 0))
+        else:
+            if not isinstance(momentum, (list, tuple)):
+                momentum = tuple(momentum)
+            momentum = ffi.new('double [3]', momentum)
 
-    return Products(products)
+        if polarisation is None:
+            polar_cb = ffi.NULL
+        else:
+            global _POLARISATION
+            _POLARISATION = polarisation
+            polar_cb = lib._polarisation_callback
+
+        products = ffi.new('struct alouette_products *')
+        _call(
+            lib.alouette_undecay,
+            mode,
+            pid,
+            momentum,
+            polar_cb,
+            products,
+        )
+
+        return Products(products)
+
+# Override as class singleton
+undecay = undecay()

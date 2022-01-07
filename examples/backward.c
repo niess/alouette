@@ -3,13 +3,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* ALOUETTE: a TAUOLA BMC wrapper. */
+/* Alouette: a TAUOLA BMC wrapper. */
 #include "alouette.h"
 
-/* Tau longitudinal polariser. */
-static void polarise(int pid, const double momentum[3], double * polarisation)
+/* Callback for setting the polarisation in backward decays.
+ *
+ * Returns a 100% longitudinal polarisation, i.e. a left handed tau- or a right
+ * handed tau+.
+ */
+static void polarisation(
+    int pid, const double momentum[3], double * polarisation)
 {
-        const double polar = -1.;
+        const double polar = (pid > 0) ? -1. : 1.;
         double nrm = momentum[0] * momentum[0] + momentum[1] * momentum[1] +
             momentum[2] * momentum[2];
         if (nrm <= 0.) {
@@ -29,14 +34,13 @@ int main()
         /* Randomise a few tau decays. */
         const int mode = 0;
         const int daughter = 16;
-        const int mother = 0;
         const double momentum[3] = { 0., 0., 1. };
 
         int i;
         for (i = 0; i < 3; i++) {
                 struct alouette_products products;
-                if (alouette_undecay(mode, daughter, mother, momentum,
-                    polarise, -1., &products) != ALOUETTE_RETURN_SUCCESS) {
+                if (alouette_undecay(mode, daughter, momentum,
+                    &polarisation, &products) != ALOUETTE_RETURN_SUCCESS) {
                         fprintf(stderr, "%s\n", alouette_message());
                         exit(EXIT_FAILURE);
                 }

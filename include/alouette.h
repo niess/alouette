@@ -88,7 +88,7 @@ struct alouette_products {
 };
 
 /**
- * Perform a forward Monte-Carlo tau decay.
+ * Forward Monte Carlo tau decay.
  *
  * @param mode            The tau decay mode, or `0`.
  * @param pid             The PDG ID of the decaying tau, i.e. `15` or `-15`.
@@ -136,18 +136,15 @@ typedef void alouette_polarisation_cb(
     double * polarisation);
 
 /**
- * Perform a backward Monte-Carlo tau decay.
+ * Backward Monte Carlo tau decay.
  *
  * @param mode            The tau decay mode, or `0` for any.
  * @param pid             The PDG ID of the particle to backward decay,
  *                        e.g. `16` for a tau neutrino.
- * @param mother          The PDG ID of the mother particle,
- *                        or `0` for any valid mother.
  * @param momentum        The daughter momentum after decay, in GeV/c.
  * @param polarisation    A callback for the spin polarisation of the mother or
  *                        `NULL`.
- * @param bias            Tuning parameter for the spin bias.
- * @param weight          The backward Monte-Carlo decay products.
+ * @param weight          The backward Monte Carlo decay products.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
@@ -158,12 +155,6 @@ typedef void alouette_polarisation_cb(
  * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
  * then the decay mode is randomised over all available modes, according to
  * branching ratios.
- *
- * The spin *bias* parameters allows to control the biasing of the angular
- * distribution of decay products in the mother's rest frame. It must be in the
- * range [-1, 1]. It is expected to be a hint on the mother's longitudinal spin
- * polarisation. Thus, it is typically -1 for a &tau;^(-) or +1 for a &tau;^(+).
- * Set the bias to zero if the spin polarization is a priori unknown.
  *
  * __Error codes__
  *
@@ -176,11 +167,29 @@ typedef void alouette_polarisation_cb(
 enum alouette_return alouette_undecay(
     int mode,
     int pid,
-    int mother,
     const double momentum[3],
     alouette_polarisation_cb * polarisation,
-    double bias,
     struct alouette_products * products);
+
+/** Mother particle(s) for backward decays.
+ *
+ * PDG ID of the mother particle or `0` for any of &tau;^(-) or &tau;^(+).
+ * Defaults to `0`.
+ *
+ * __Note__ : must be one of 15 (tau-), -15 (tau+) or 0 (tau- or tau+).
+ */
+extern int alouette_undecay_mother;
+
+/** Tuning parameter for the spin bias in backward decays.
+ *
+ * The spin *bias* parameters allows to control the biasing of the angular
+ * distribution of decay products in the mother's rest frame. It must be in the
+ * range [-1, 1]. It is expected to be a hint on the mother's longitudinal spin
+ * polarisation. It defaults to `1`, i.e. 100% polarised.
+ *
+ * __Note__ : set the bias to zero if the spin polarization is a priori unknown.
+ */
+extern double alouette_undecay_bias;
 
 /**
  * The library PRNG, uniform over (0,1).

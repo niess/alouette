@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* ALOUETTE: a TAUOLA BMC wrapper. */
+/* Alouette: a TAUOLA BMC wrapper. */
 #include "alouette.h"
 
 int main()

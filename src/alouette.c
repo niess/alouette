@@ -1231,10 +1231,17 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         return ALOUETTE_RETURN_SUCCESS;
 }
 
+/* Mother particle(s) for backward decays. */
+int alouette_undecay_mother = 0;
+
+
+/** Tuning parameter for the spin bias in backward decays. */
+double alouette_undecay_bias = 1.;
+
 /* Backward decay from a tau neutrino to a tau. */
-enum alouette_return alouette_undecay(int mode, int daughter, int mother,
+enum alouette_return alouette_undecay(int mode, int daughter,
     const double momentum[3], alouette_polarisation_cb * polarisation_cb,
-    double bias, struct alouette_products * products)
+    struct alouette_products * products)
 {
         /* Initialise the products container. */
         products_reset(products);
@@ -1259,12 +1266,14 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
         }
 
         /* Check the mother PID */
+        int mother = alouette_undecay_mother;
         if (mother && (abs(mother) != 15)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad mother pid (%d)", mother);
         }
 
         /* Check the bias value */
+        double bias = alouette_undecay_bias;
         if ((bias < -1.) || (bias > 1.)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad bias value (%g)", bias);
@@ -1308,6 +1317,8 @@ enum alouette_return alouette_undecay(int mode, int daughter, int mother,
         }
 
         if (polarisation_cb != NULL) {
+                if (mother > 0) bias = -bias;
+
                 const double * const hi = products->polarimeter;
                 const double h2 =
                     hi[0] * hi[0] + hi[1] * hi[1] + hi[2] * hi[2];

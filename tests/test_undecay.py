@@ -5,10 +5,14 @@ from .utils import almost_equal
 
 
 def test_undecay():
-    '''Test the undecay function'''
+    '''Test the undecay wrapper'''
 
     # Disable radiative corrections
     alouette.core.initialise(xk0dec=0)
+
+    # Check the default settings
+    assert alouette.undecay.mother == 0
+    assert alouette.undecay.bias == 1
 
     # Check the pid and mother arguments
     momentum = numpy.array((0, 0, 1))
@@ -20,25 +24,28 @@ def test_undecay():
 
     products = alouette.undecay(pid=-16, momentum=momentum)
     assert products.pid[0] == -15
-
-    products = alouette.undecay(mode=1, pid=11, mother=15, momentum=momentum)
+    alouette.undecay.mother = 15
+    products = alouette.undecay(mode=1, pid=11, momentum=momentum)
     assert products.pid[0] == 15
     assert products.pid[1] == 16
     assert products.pid[2] == -12
 
-    products = alouette.undecay(mode=1, pid=12, mother=-15, momentum=momentum)
+    alouette.undecay.mother = -15
+    products = alouette.undecay(mode=1, pid=12, momentum=momentum)
     assert products.pid[0] == -15
     assert products.pid[1] == -16
     assert products.pid[2] == -11
 
+    alouette.undecay.mother = 15
     with pytest.raises(ValueError) as exc_info:
-        alouette.undecay(mode=1, pid=12, mother=15, momentum=momentum)
+        alouette.undecay(mode=1, pid=12, momentum=momentum)
     assert (
-        'inconsistent values for mother (15), daugther (12) and mode (1)'
+        'inconsistent values for mother (15), daughter (12) and mode (1)'
         in exc_info.exconly()
     )
 
     # Check the null momentum case
+    alouette.undecay.mother = 0
     with pytest.raises(ValueError) as exc_info:
         alouette.undecay()
     assert 'bad daughter momentum (0)' in exc_info.exconly()
@@ -60,8 +67,27 @@ def test_undecay():
     alouette.undecay(momentum=momentum, polarisation=polarisation_cb)
     alouette.undecay(momentum=(0, 0, 1), polarisation=polarisation_cb)
 
-    # Check the bias argument
-    alouette.undecay(momentum=momentum, bias=0)
-    alouette.undecay(momentum=momentum, bias=-1)
+    # Check the mother parameter
+    alouette.undecay.mother = 15
+    assert alouette.undecay.mother == 15
+    alouette.undecay.mother = -15
+    assert alouette.undecay.mother == -15
     with pytest.raises(TypeError):
-        alouette.undecay(momentum=momentum, bias='1')
+        alouette.undecay.mother = 'tau'
+    with pytest.raises(ValueError):
+        alouette.undecay.mother = 11
+    alouette.undecay.mother = 0
+    assert alouette.undecay.mother == 0
+
+    # Check the bias parameter
+    alouette.undecay.bias = 0
+    assert alouette.undecay.bias == 0
+    alouette.undecay.bias = -1
+    assert alouette.undecay.bias == -1
+    alouette.undecay(momentum=momentum)
+    with pytest.raises(TypeError):
+        alouette.undecay.bias = '1'
+    with pytest.raises(ValueError):
+        alouette.undecay.bias = 2
+    alouette.undecay.bias = 1
+    assert alouette.undecay.bias == 1
