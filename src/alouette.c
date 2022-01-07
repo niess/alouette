@@ -1265,7 +1265,22 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                     momentum2);
         }
 
-        /* Check the mother PID */
+        /* Check the daughter pid. */
+        const int valid_pids[] = {-16, 16, -11, 11, -12, 12, -13, 13, -14, 14,
+            -211, 211, 111, 221, -321, 321, 310, 130};
+        int is_valid = 0, i;
+        for (i = 0; i < sizeof(valid_pids) / sizeof(valid_pids[0]); i++) {
+                if (daughter == valid_pids[i]) {
+                        is_valid = 1;
+                        break;
+                }
+        }
+        if (!is_valid) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                        "bad daughter pid (%d)", daughter);
+        }
+
+        /* Check the mother PID. */
         int mother = alouette_undecay_mother;
         if (mother && (abs(mother) != 15)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
@@ -1305,7 +1320,6 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         } else {
                 idx = 0;
         }
-        int i = 0;
         double * pi;
         for (i = 0, pi = &products->P[0][0]; i < products->size; i++, pi += 4)
                 if (products->pid[i] == daughter) {
