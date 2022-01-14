@@ -1145,7 +1145,12 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
                 if ((rc = decay(pid, mode, products)) !=
                     ALOUETTE_RETURN_SUCCESS)
                         return rc;
-                if (!isinf(products->P[0][0])) break;
+                if ((!isnan(products->polarimeter[0])) &&
+                    (!isinf(products->P[0][0]))) {
+                        break;
+                } else {
+                        products_reset(products);
+                }
         }
 
         if (polarisation != NULL) {
@@ -1308,7 +1313,12 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                 if ((rc = decay(mother, mode, products)) !=
                     ALOUETTE_RETURN_SUCCESS)
                         return rc;
-                if (!isinf(products->P[0][0])) break;
+                if ((!isnan(products->polarimeter[0])) &&
+                    (!isinf(products->P[0][0]))) {
+                        break;
+                } else {
+                        products_reset(products);
+                }
         }
 
         /* Get the daughter's index. */
@@ -1321,11 +1331,14 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                 idx = 0;
         }
         double * pi;
-        for (i = 0, pi = &products->P[0][0]; i < products->size; i++, pi += 4)
-                if (products->pid[i] == daughter) {
+        int idau;
+        for (idau = 0, pi = &products->P[0][0]; idau < products->size;
+            idau++, pi += 4) {
+                if (products->pid[idau] == daughter) {
                         if (idx-- == 0) break;
                 }
-        if (i == products->size) {
+        }
+        if (idau == products->size) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "no such daughter (%d) in decay products", daughter);
         }
@@ -1352,25 +1365,25 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                         double norm = bias / sqrt(momentum2);
                         double u[3] = {momentum[0] * norm,
                             momentum[1] * norm, momentum[2] * norm};
-                        if (rotate_direction(cos_theta, u) !=
+                        if (rotate_direction(cos_theta, u) ==
                             ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
-                        }
+                                /* Update the direction of decay products in
+                                 * order to match the new polarimeter.
+                                 */
+                                const double h = sqrt(h2);
+                                double R[9];
+                                if ((rc = build_rotation(u, hi, h, R)) ==
+                                    ALOUETTE_RETURN_SUCCESS) {
+                                        int i;
+                                        for (i = 0; i < products->size; i++) {
+                                                mv_multiply(R,
+                                                    &products->P[i][0]);
+                                        }
 
-                        /* Update the direction of decay products in order to
-                         * match the new polarimeter.
-                         */
-                        const double h = sqrt(h2);
-                        double R[9];
-                        if ((rc = build_rotation(u, hi, h, R)) ==
-                            ALOUETTE_RETURN_SUCCESS) {
-                                int i;
-                                for (i = 0; i < products->size; i++) {
-                                        mv_multiply(R, &products->P[i][0]);
-                                }
-
-                                for (i = 0; i < 3; i++) {
-                                        products->polarimeter[i] = h * u[i];
+                                        for (i = 0; i < 3; i++) {
+                                                products->polarimeter[i] =
+                                                    h * u[i];
+                                        }
                                 }
                         }
                 }
@@ -1398,7 +1411,7 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         double Et = 0., Pt[3] = { 0., 0., 0. };
         double * pj;
         for (j = 0, pj = &products->P[0][0]; j < products->size; j++, pj += 4) {
-                if (j == i) {
+                if (j == idau) {
                         /* Update with the provided daughter data. */
                         Et += energy;
                         Pt[0] += momentum[0];
@@ -1442,10 +1455,9 @@ enum alouette_return alouette_undecay(int mode, int daughter,
          * the mother's 4 momentum has been re-computed from the boosted
          * products.
          */
-        for (j = 0; j < i; j++) {
-                const int ii = i - j;
-                products->pid[ii] = products->pid[ii - 1];
-                memcpy(&products->P[ii][0], &products->P[ii - 1][0],
+        for (j = idau; j > 0; j--) {
+                products->pid[j] = products->pid[j - 1];
+                memcpy(&products->P[j][0], &products->P[j - 1][0],
                     4 * sizeof(products->P[0][0]));
         }
 
