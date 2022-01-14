@@ -8,9 +8,9 @@ import re
 
 PREFIX = Path(__file__).parent.parent.resolve()
 
-INCLUDE_PATHS = ['include']
+INCLUDE_PATHS = ['include', 'src']
 
-HEADERS = ['include/alouette.h']
+HEADERS = ['include/alouette.h', 'src/tauola.h']
 
 
 def format_source(*paths):

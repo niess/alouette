@@ -134,6 +134,12 @@ def wrap(sources, includes, outfile):
             if r:
                 blocks.add(r.group(1))
 
+        statblock = None
+        if entity.name in ('DADMEL', 'DADMMU', 'DADMRO', 'DADMAA', 'DADMKS',
+                           'DADNEW'):
+            statblock = f'TAUOLA_WEIGHT_{entity.name.upper()}'
+            blocks.add(statblock)
+
         if blocks:
             started = False
             for index, line in enumerate(lines):
@@ -156,12 +162,24 @@ def wrap(sources, includes, outfile):
                 elif started:
                     break
 
+            if statblock:
+                lines.insert(index,
+                    f'      COMMON /{statblock}/ WTMAX')
+                index += 1
+                if statblock != 'TAUOLA_WEIGHT_DADNEW':
+                    lines.insert(index,
+                        '      REAL*4 WTMAX')
+                    index += 1
+
             lines.insert(index, '!')
             index += 1
             for block in blocks:
+                cname = block.lower()
+                if not cname.startswith('tauola_'):
+                    cname = 'tauola_' + cname
                 lines.insert(
                     index,
-                    f"      BIND(C,NAME='tauola_{block.lower()}') /{block}/",
+                    f"      BIND(C,NAME='{cname}') /{block}/",
                 )
                 index += 1
             lines.insert(index, '!')
@@ -377,7 +395,7 @@ def wrap(sources, includes, outfile):
 
     code = [
         f'''!     ==================================================================
-!     This is a C-library compliant re-distribution of TAUOLA
+!     This is a C-library compliant reformating of TAUOLA
 !
 !     The original FORTRAN code is available from the tauolapp website:
 !     https://tauolapp.web.cern.ch/tauolapp (v1.1.8, LHC).
@@ -451,6 +469,7 @@ def wrap(sources, includes, outfile):
         if line:
             new.append(line)
             i += 1
+    code.append('')
     code = os.linesep.join(new)
 
     # Dump the result

@@ -30,6 +30,9 @@
 /* The Alouette API. */
 #include "alouette.h"
 
+/* TAUOLA external symbols. */
+#include "tauola.h"
+
 #ifndef M_PI
 /* Define pi, if unknown. */
 #define M_PI 3.14159265358979323846
@@ -53,13 +56,6 @@ struct tauola_taukle {
 };
 
 extern struct tauola_taukle tauola_taukle;
-
-extern struct {
-    float amtau, amnuta, amel, amnue, ammu, amnumu, ampiz, ampi, amro, gamro,
-          ama1, gama1, amk, amkz, amkst, gamkst;
-} tauola_parmas;
-
-extern void tauola_decay(int * state, double polarimeter[4]);
 
 /* Jump buffer for calling back from a TAUOLA error.
  *

@@ -64,7 +64,7 @@ $(TAUOLA_DIR):
 
 
 # Build the library
-ALOUETTE_INCLUDES= include/alouette.h
+ALOUETTE_INCLUDES= include/alouette.h src/tauola.h
 ALOUETTE_OBJS=     $(BUILD_DIR)/alouette.o
 
 $(BUILD_DIR)/alouette.o: src/alouette.c $(ALOUETTE_INCLUDES) | build
