@@ -954,7 +954,7 @@ const char * alouette_message(void)
 {
         static const char * msg[ALOUETTE_N_RETURNS] = {
             "Operation succeeded", "A value is out of range",
-            "A floating point error occured", "A Tauola error occured" };
+            "A Tauola error occured" };
 
         if (_message.data[0] == 0x0) {
                 if (_message.code == ALOUETTE_RETURN_SUCCESS) {
@@ -1003,14 +1003,12 @@ static void mv_multiply(const double * M, double * v)
 }
 
 /* Rotate a direction randomly but constraining the polar angle. */
-static enum alouette_return rotate_direction(
-    double cos_theta, double * direction)
+static int rotate_direction(double cos_theta, double * direction)
 {
         /* Check the numerical sine. */
         const double stsq = 1. - cos_theta * cos_theta;
-        if (stsq <= 0.) {
-                return message_error(ALOUETTE_RETURN_FLOATING_ERROR,
-                        "floating point exception (%g <= 0.)", stsq);
+        if (stsq <= DBL_EPSILON) {
+                return EXIT_FAILURE;
         }
         const double st = sqrt(stsq);
 
@@ -1056,11 +1054,11 @@ static enum alouette_return rotate_direction(
         direction[1] = cos_theta * direction[1] + st * (cp * u0y + sp * u1y);
         direction[2] = cos_theta * direction[2] + st * (cp * u0z + sp * u1z);
 
-        return ALOUETTE_RETURN_SUCCESS;
+        return EXIT_SUCCESS;
 }
 
 /* Build a rotation matrix from vi to vf. */
-static enum alouette_return build_rotation(
+static int build_rotation(
     const double * vi, const double * vf, double norm_f, double * R)
 {
         /* Build the rotation axis. */
@@ -1070,7 +1068,7 @@ static enum alouette_return build_rotation(
         if (fabs(nrm) <= FLT_EPSILON) {
                 if (vi[0] * vf[0] + vi[1] * vf[1] + vi[2] * vf[2] > 0.) {
                         /* The two vectors are aligned within numeric errors. */
-                        return ALOUETTE_RETURN_FLOATING_ERROR;
+                        return EXIT_FAILURE;
                 } else {
                         /* The two vectors are back to back. */
                         R[0] = -1.;
@@ -1083,7 +1081,7 @@ static enum alouette_return build_rotation(
                         R[7] = 0.;
                         R[8] = -1.;
 
-                        return ALOUETTE_RETURN_SUCCESS;
+                        return EXIT_SUCCESS;
                 }
         }
         nrm = 1. / sqrt(nrm);
@@ -1109,7 +1107,7 @@ static enum alouette_return build_rotation(
         R[7] = n[1] * n[2] * c1 + n[0] * s;
         R[8] = n[2] * n[2] * c1 + c;
 
-        return ALOUETTE_RETURN_SUCCESS;
+        return EXIT_SUCCESS;
 }
 
 /* Decay a tau with TAUOLA. */
@@ -1175,25 +1173,24 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 
                         double u[3] = {polarisation[0] / s,
                             polarisation[1] / s, polarisation[2] / s};
-                        if (rotate_direction(cos_theta, u) !=
-                            ALOUETTE_RETURN_SUCCESS) {
-                                return rc;
-                        }
+                        if (rotate_direction(cos_theta, u) == EXIT_SUCCESS) {
+                                /* Update the direction of decay products in
+                                 * order to match the new polarimeter.
+                                 */
+                                const double h = sqrt(h2);
+                                double R[9];
+                                if (build_rotation(u, hi, h, R) ==
+                                    EXIT_SUCCESS) {
+                                        int i;
+                                        for (i = 0; i < products->size; i++) {
+                                                mv_multiply(
+                                                    R, &products->P[i][0]);
+                                        }
 
-                        /* Update the direction of decay products in order to
-                         * match the new polarimeter.
-                         */
-                        const double h = sqrt(h2);
-                        double R[9];
-                        if ((rc = build_rotation(u, hi, h, R)) ==
-                            ALOUETTE_RETURN_SUCCESS) {
-                                int i;
-                                for (i = 0; i < products->size; i++) {
-                                        mv_multiply(R, &products->P[i][0]);
-                                }
-
-                                for (i = 0; i < 3; i++) {
-                                        products->polarimeter[i] = h * u[i];
+                                        for (i = 0; i < 3; i++) {
+                                                products->polarimeter[i] =
+                                                    h * u[i];
+                                        }
                                 }
                         }
                 }
@@ -1365,15 +1362,14 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                         double norm = bias / sqrt(momentum2);
                         double u[3] = {momentum[0] * norm,
                             momentum[1] * norm, momentum[2] * norm};
-                        if (rotate_direction(cos_theta, u) ==
-                            ALOUETTE_RETURN_SUCCESS) {
+                        if (rotate_direction(cos_theta, u) == EXIT_SUCCESS) {
                                 /* Update the direction of decay products in
                                  * order to match the new polarimeter.
                                  */
                                 const double h = sqrt(h2);
                                 double R[9];
-                                if ((rc = build_rotation(u, hi, h, R)) ==
-                                    ALOUETTE_RETURN_SUCCESS) {
+                                if (build_rotation(u, hi, h, R) ==
+                                    EXIT_SUCCESS) {
                                         int i;
                                         for (i = 0; i < products->size; i++) {
                                                 mv_multiply(R,

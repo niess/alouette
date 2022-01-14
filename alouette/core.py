@@ -74,7 +74,6 @@ class Products:
 _index_to_exception = (
     Exception,  # ALOUETTE_RETURN_SUCCESS
     ValueError,  # ALOUETTE_RETURN_VALUE_ERROR
-    FloatingPointError,  # ALOUETTE_RETURN_FLOATING_ERROR
     RuntimeError,  # ALOUETTE_RETURN_TAUOLA_ERROR
 )
 

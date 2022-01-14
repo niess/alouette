@@ -31,8 +31,6 @@ enum alouette_return {
         ALOUETTE_RETURN_SUCCESS = 0,
         /** A parameter is out of its validity range. */
         ALOUETTE_RETURN_VALUE_ERROR,
-        /** A floating point error occured. */
-        ALOUETTE_RETURN_FLOATING_ERROR,
         /** A TAUOLA error occured. */
         ALOUETTE_RETURN_TAUOLA_ERROR,
         /** The number of Alouette return codes.  */
