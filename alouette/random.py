@@ -1,10 +1,10 @@
 from ._core import ffi, lib
 
-__all__ = ('Random', 'random')
+__all__ = ('random',)
 
 
-class Random:
-    '''Wrapper for Alouette's Pseudo Random Numbers Generator (PRNG)'''
+class random:
+    '''Alouette's Pseudo Random Numbers Generator (PRNG)'''
 
     @property
     def seed(self):
@@ -25,4 +25,5 @@ class Random:
         return float(lib.alouette_random())
 
 
-random = Random()
+# Override as class singleton
+random = random()

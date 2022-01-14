@@ -72,7 +72,7 @@ const char * alouette_message(void);
  * Container for TAUOLA decay products.
  */
 struct alouette_products {
-#define ALOUETTE_MAX_SIZE 16
+#define ALOUETTE_MAX_SIZE 7
         /** Number of decay products. */
         int size;
         /** PDG IDs of decay products. */
