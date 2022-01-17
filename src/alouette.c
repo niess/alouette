@@ -565,7 +565,8 @@ static enum alouette_return channel_select_backward(int daughter,
 static int _tauola_initialised = 0;
 
 /* Initialise TAUOLA and its wrapper. */
-enum alouette_return alouette_initialise(double * xk0dec)
+enum alouette_return alouette_initialise(
+    unsigned long * init_seed, double * xk0dec)
 {
         message_reset();
         if (_tauola_initialised) {
@@ -625,7 +626,7 @@ enum alouette_return alouette_initialise(double * xk0dec)
         struct random_stream tmp_random;
         memcpy(&tmp_random, &_random_stream, sizeof tmp_random);
 
-        unsigned long tmp_seed = 1357894;
+        unsigned long tmp_seed = (init_seed == NULL) ? 1357894 : *init_seed;
         alouette_random_set(&tmp_seed);
 
         /* Initialise the decay routine. */
@@ -1116,7 +1117,7 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
         if (!_tauola_initialised) {
-                if ((rc = alouette_initialise(NULL)) !=
+                if ((rc = alouette_initialise(NULL, NULL)) !=
                     ALOUETTE_RETURN_SUCCESS) {
                         return rc;
                 }
@@ -1247,7 +1248,7 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         /* Initialise the library, if not already done. */
         enum alouette_return rc;
         if (!_tauola_initialised) {
-                if ((rc = alouette_initialise(NULL)) !=
+                if ((rc = alouette_initialise(NULL, NULL)) !=
                     ALOUETTE_RETURN_SUCCESS) {
                         return rc;
                 }

@@ -12,7 +12,7 @@ def test_initialise():
     alouette.random.set(12345)
     alouette.random()
 
-    alouette.core.initialise()
+    alouette.core.initialise(seed=0)
     assert alouette.random.seed == 12345
     assert alouette.random() == u1
 

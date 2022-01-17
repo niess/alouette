@@ -87,15 +87,20 @@ def _call(f, *args):
         raise exception(message)
 
 
-def initialise(xk0dec=None):
+def initialise(seed=None, xk0dec=None):
     '''Initialise TAUOLA using custom settings'''
+
+    if seed is None:
+        seed = ffi.NULL
+    else:
+        seed = ffi.new('unsigned long [1]', (seed,))
 
     if xk0dec is None:
         xk0dec = ffi.NULL
     else:
         xk0dec = ffi.new('double [1]', (xk0dec,))
 
-    _call(lib.alouette_initialise, xk0dec)
+    _call(lib.alouette_initialise, seed, xk0dec)
 
 
 def decay(mode=None, pid=None, momentum=None, polarisation=None):

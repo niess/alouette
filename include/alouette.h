@@ -40,7 +40,8 @@ enum alouette_return {
 /**
  * Initialise TAUOLA and the Alouette wrapper.
  *
- * @param xk0dec  Factor for radiative corrections or `NULL`.
+ * @param seed    PRNG seed for TAUOLA initialisation, or `NULL`.
+ * @param xk0dec  Factor for radiative corrections, or `NULL`.
  * @return On success `ALOUETTE_RETURN_SUCCESS` is returned otherwise an error
  * code is returned as detailed below.
  *
@@ -48,6 +49,11 @@ enum alouette_return {
  * that if not done explictly, the library is initialised on need with default
  * settings. Thus, this function must be called before other library functions
  * if custom settings are desired.
+ *
+ * __Note__ : TAUOLA initialisation performs a maximum search using a PRNG. This
+ * is done with a dedicated and independent random stream.  The provided *seed*
+ * value only impacts the latter, not the runtime random stream. Use the
+ * `alouette_random_set` function in order to set the Monte~Carlo PRNG.
  *
  * __Note__ : if *xk0dec* is `NULL`, then a default value of 1E-03 is used,
  * following Jezabek et al., CPC 70 (1992) 69-76.
@@ -57,7 +63,7 @@ enum alouette_return {
  *     ALOUETTE_RETURN_TAUOLA_ERROR    A TAUOLA error occured.
  */
 enum alouette_return alouette_initialise(
-    double * xk0dec);
+    unsigned long * seed, double * xk0dec);
 
 /**
  * Return the last (error) message(s).
