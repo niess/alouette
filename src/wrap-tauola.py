@@ -284,15 +284,11 @@ def wrap(sources, includes, outfile):
         def prune_format(fmt):
             '''Prune a fortran format string'''
             if fmt != "''":
-                fmt = fmt.split(',')
-                for i, v in enumerate(fmt):
-                    v = v.strip()
-                    if v[0] == "'":
-                        v = v[1:-1]
-                    else:
-                        v = ''
-                    fmt[i] = v
-                return "'" + ''.join(fmt) + "'"
+                m = re.findall(r"'([^']+)'", fmt)
+                if m:
+                    return "'" + ''.join(m).strip() + "'"
+                else:
+                    return "''"
             else:
                 return fmt
 
@@ -463,7 +459,7 @@ def wrap(sources, includes, outfile):
         line = re.sub(r' +$', '', line)
         line = re.sub(
             r"TAUOLA_PRINT[(]''[)]",
-            f"TAUOLA_PRINT(' tauola.f:{i + 1}: (suppressed)'//CHAR(0))",
+            f"TAUOLA_PRINT('tauola.f:{i + 1}: (suppressed)'//CHAR(0))",
             line,
         )
         if line:
