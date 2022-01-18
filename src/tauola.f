@@ -10,8 +10,12 @@
 !     using the `tauola_` prefix.
 !     ==================================================================
       SUBROUTINE TAUOLA_DECAY(KTO,HX) BIND(C)
-      INTEGER KTO
+      INTEGER KTO,ITMP
       REAL*8 HX(4)
+      COMMON /IPChT/ IVER
+      INTEGER        IVER
+      DATA           IVER/1/
+      BIND(C,NAME='tauola_ipcht') /IPChT/
 !     ==================================================================
 !     External routines needed by TAUOLA
 !     ==================================================================
@@ -37,11 +41,18 @@
 !     Call the TAUOLA.DEKAY routine
 !     ==================================================================
       IF(KTO.EQ.-1) THEN
+        ITMP=IVER ! Backup version
+        IVER=1    ! Enable new currents
+        CALL RCHL_PARAMETERS(IVER)
         CALL INIMAS()
         CALL INITDK()
         CALL INIPHY(1.0D-1) ! XK0=0.1 is not used
         CALL DEKAY(KTO,HX)
+        IVER=ITMP ! Restore version
       ELSE
+        IF (IVER.EQ.1) THEN
+          CALL RCHL_PARAMETERS(IVER)
+        ENDIF
         CALL DEKAY(KTO,HX)
       ENDIF
       CONTAINS
@@ -335,9 +346,9 @@ C
       DATA ICONT /1/
 * THIS INLINE FUNCT. CALCULATES THE SCALAR PART OF THE PROPAGATOR
 !
+      BIND(C,NAME='tauola_testa1') /TESTA1/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_testa1') /TESTA1/
 !
       BWIGN(XM,AM,GAMMA)=1./CMPLX(XM**2-AM**2,GAMMA*AM)
 * HADRON CURRENT
@@ -419,8 +430,8 @@ C
       COMPLEX FORMA1,FORMK1,FORMRO,FORMKS
 C
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF     (MNUM.EQ.0) THEN
 C ------------  3 pi hadronic state (a1)
@@ -490,8 +501,8 @@ C
       INTEGER        IVER
       COMPLEX FORMA1,FORMK1,FORMRO,FORMKS
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF     (MNUM.EQ.0) THEN
 C ------------  3 pi hadronic state (a1)
@@ -646,8 +657,8 @@ C
       COMPLEX F3PI_RCHT
 C
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF (MNUM.EQ.0) THEN
 C ------------  3 pi hadronic state (a1)
@@ -695,8 +706,8 @@ C
       REAL*4 M
 C ---- this formfactor is switched off for cleo version
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
        FORM4=CMPLX(0.0,0.0)
       IF (MNUM.EQ.0) THEN
@@ -874,12 +885,12 @@ C JAK=0 INCLUSIVE:  JAK=1,2,3,4,5,6,7,8
       REAL  PDUMX(4,9)
       DATA IWARM/0/
 !
+      BIND(C,NAME='tauola_idfc') /IDFC/
+      BIND(C,NAME='tauola_inout') /INOUT/
       BIND(C,NAME='tauola_ipcht') /IPChT/
       BIND(C,NAME='tauola_taudcd') /TAUDCD/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_inout') /INOUT/
-      BIND(C,NAME='tauola_idfc') /IDFC/
       BIND(C,NAME='tauola_jaki') /JAKI/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
       BIND(C,NAME='tauola_taupos') /TAUPOS/
 !
       KTOM=KTO
@@ -892,7 +903,7 @@ C       first or second tau positions in HEPEVT as in KORALB/Z
         KTOM=1
         IF (IWARM.EQ.1) X=5/(IWARM-1)
         IWARM=1
-        CALL TAUOLA_PRINT('tauola.f:895: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:906: (suppressed)'//CHAR(0))
 !       WRITE(IOUT,7001) JAK1,JAK
         CALL TAUOLA_PRINT('*IVER   = hadronic current version'//CHAR(0))
 !       WRITE(IOUT,7002) IVER
@@ -954,14 +965,14 @@ C     =======================
           CALL DADMKK( 1,IDUM,HDUM,PDUM1,PDUM2)
           CALL DADMKS( 1,IDUM,HDUM,PDUM1,PDUM2,PDUM3,PDUM4,JDUM)
           CALL DADNEW( 1,IDUM,HDUM,PDUM1,PDUM2,PDUMX,JDUM)
-          CALL TAUOLA_PRINT('tauola.f:957: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:968: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7010) NEV1,NEV2,NEVTOT
-          CALL TAUOLA_PRINT('tauola.f:959: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:970: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7011) (NEVDEC(I),GAMPMC(I),GAMPER(I),I= 1,7)
-          CALL TAUOLA_PRINT('tauola.f:961: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:972: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7012)
 !    $         (NEVDEC(I),GAMPMC(I),GAMPER(I),NAMES(I-7),I=8,7+NMODE)
-          CALL TAUOLA_PRINT('tauola.f:964: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:975: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7013)
         ENDIF
       ELSE
@@ -1052,9 +1063,9 @@ C THIS ROUTINE  SIMULATES TAU+  DECAY
       REAL  PDUM(4)
       DATA NEV,NPRIN/0,10/
 !
-      BIND(C,NAME='tauola_decp4') /DECP4/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
       BIND(C,NAME='tauola_jaki') /JAKI/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_decp4') /DECP4/
 !
       KTO=1
       IF(JAK1.EQ.-1) RETURN
@@ -1148,9 +1159,9 @@ C THIS ROUTINE  SIMULATES TAU-  DECAY
       REAL  PDUM(4)
       DATA NEV,NPRIN/0,10/
 !
-      BIND(C,NAME='tauola_decp4') /DECP4/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
       BIND(C,NAME='tauola_jaki') /JAKI/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_decp4') /DECP4/
 !
       KTO=2
       IF(JAK2.EQ.-1) RETURN
@@ -1255,11 +1266,11 @@ C
       COMMON /TAUOLA_WEIGHT_DADMEL/ WTMAX
       REAL*4 WTMAX
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_weight_dadmel') /TAUOLA_WEIGHT_DADMEL/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -1318,7 +1329,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1321: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1332: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(803)
         GAMPMC(1)=RAT
@@ -1368,11 +1379,11 @@ C
       COMMON /TAUOLA_WEIGHT_DADMMU/ WTMAX
       REAL*4 WTMAX
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_weight_dadmmu') /TAUOLA_WEIGHT_DADMMU/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -1429,7 +1440,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1432: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1443: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(802)
         GAMPMC(2)=RAT
@@ -1518,10 +1529,10 @@ C
       REAL*8  PR(4)
       REAL*4 RRR(6)
 !
-      BIND(C,NAME='tauola_decpar') /DECPAR/
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_inout') /INOUT/
       BIND(C,NAME='tauola_taurad') /TAURAD/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       LOGICAL IHARD
       DATA PI /3.141592653589793238462643D0/
@@ -1735,9 +1746,9 @@ C
       DATA PI /3.141592653589793238462643D0/
 C
 !
+      BIND(C,NAME='tauola_qedprm') /QEDPRM/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_qedprm') /QEDPRM/
 !
       TMASS=AMTAU
       GF=GFERMI
@@ -1813,9 +1824,9 @@ C
       COMMON / QEDPRM /ALFINV,ALFPI,XK0
       REAL*8           ALFINV,ALFPI,XK0
 !
+      BIND(C,NAME='tauola_qedprm') /QEDPRM/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_qedprm') /QEDPRM/
 !
       DIMENSION QP(4),XN(4),XA(4)
       REAL*8 HV(4)
@@ -1919,10 +1930,10 @@ C
       DATA PI /3.141592653589793238462643/
 C
 !
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_inout') /INOUT/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_inout') /INOUT/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -1963,7 +1974,7 @@ C       configurations only
      $            -4*AMPI**2*AMNUTA**2           )/AMTAU**2
         ERROR=0
         RAT=GAMM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1966: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1977: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVTOT,GAMM,RAT,ERROR
         GAMPMC(3)=RAT
         GAMPER(3)=ERROR
@@ -2004,11 +2015,11 @@ C
       COMMON /TAUOLA_WEIGHT_DADMRO/ WTMAX
       REAL*4 WTMAX
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_weight_dadmro') /TAUOLA_WEIGHT_DADMRO/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_weight_dadmro') /TAUOLA_WEIGHT_DADMRO/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -2064,7 +2075,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2067: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2078: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(4)=RAT
@@ -2255,8 +2266,8 @@ C
       INTEGER        IVER
       INTEGER FF2PIRHO
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       REAL PKSD,QQPKS
       INTEGER IK,K
@@ -2534,11 +2545,11 @@ C
       COMMON /TAUOLA_WEIGHT_DADMAA/ WTMAX
       REAL*4 WTMAX
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_weight_dadmaa') /TAUOLA_WEIGHT_DADMAA/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -2592,7 +2603,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2595: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2606: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(5)=RAT
@@ -2679,10 +2690,10 @@ C
       DATA PI /3.141592653589793238462643/
 C
 !
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_inout') /INOUT/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_inout') /INOUT/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -2725,7 +2736,7 @@ C       configurations only
         ERROR=0
         ERROR=0
         RAT=GAMM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2728: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2739: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVTOT,GAMM,RAT,ERROR
         GAMPMC(6)=RAT
         GAMPER(6)=ERROR
@@ -2768,12 +2779,12 @@ C
       COMMON /TAUOLA_WEIGHT_DADMKS/ WTMAX
       REAL*4 WTMAX
 !
-      BIND(C,NAME='tauola_taukle') /TAUKLE/
-      BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_taubmc') /TAUBMC/
+      BIND(C,NAME='tauola_taukle') /TAUKLE/
       BIND(C,NAME='tauola_weight_dadmks') /TAUOLA_WEIGHT_DADMKS/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       IF(MODE.EQ.-1) THEN
 C     ===================
@@ -2839,7 +2850,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2842: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2853: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(7)=RAT
@@ -3065,8 +3076,8 @@ C
 CC--      PAWT(A,B,C)=SQRT((A**2-(B+C)**2)*(A**2-(B-C)**2))/(2.*A)
 C
 !
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_taudcd') /TAUDCD/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       PAWT(A,B,C)=
@@ -3821,9 +3832,9 @@ C AJWMOD to satisfy compiler, comment out this unused function.
 C
 * FOUR MOMENTUM OF A1
 !
+      BIND(C,NAME='tauola_testa1') /TESTA1/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_testa1') /TESTA1/
 !
       DO 10 I=1,4
       VEC1(I)=0.0
@@ -3934,9 +3945,9 @@ C
 CC
       DATA  FPIc /93.3E-3/
 !
+      BIND(C,NAME='tauola_ipcht') /IPChT/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_ipcht') /IPChT/
 !
       IF (ICONT.EQ.0) THEN
        ICONT=1
@@ -4095,12 +4106,12 @@ C
       REAL*8              SWT(NMODE),SSWT(NMODE)
       COMMON /TAUOLA_WEIGHT_DADNEW/ WTMAX
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
+      BIND(C,NAME='tauola_inout') /INOUT/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_weight_dadnew') /TAUOLA_WEIGHT_DADNEW/
       BIND(C,NAME='tauola_taudcd') /TAUDCD/
       BIND(C,NAME='tauola_taubmc') /TAUBMC/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
-      BIND(C,NAME='tauola_inout') /INOUT/
-      BIND(C,NAME='tauola_weight_dadnew') /TAUOLA_WEIGHT_DADNEW/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       DIMENSION NEVRAW(NMODE),NEVOVR(NMODE),NEVACC(NMODE)
 C
@@ -4152,7 +4163,7 @@ C       PRINT *,' DADNEW JNPI,NTRIALS,WTMAX =',JNPI,NTRIALS,WTMAX(JNPI)
 C       CALL HBOOK1(801,'WEIGHT DISTRIBUTION  DADNPI    $',100,0.,2.,.0)
 C       PRINT 7004,WTMAX(JNPI)
 1       CONTINUE
-        CALL TAUOLA_PRINT('tauola.f:4155: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:4166: (suppressed)'//CHAR(0))
 !       WRITE(IOUT,7005)
 C
       ELSEIF(MODE.EQ. 0) THEN
@@ -4217,7 +4228,7 @@ C     =======================
           IF(NEVRAW(JNPI).NE.0)
      &    ERROR=SQRT(SSWT(JNPI)/SWT(JNPI)**2-1./FLOAT(NEVRAW(JNPI)))
           RAT=PARGAM/GAMEL
-          CALL TAUOLA_PRINT('tauola.f:4220: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:4231: (suppressed)'//CHAR(0))
 !         WRITE(IOUT, 7010) NAMES(JNPI),
 !    &     NEVRAW(JNPI),NEVACC(JNPI),NEVOVR(JNPI),PARGAM,RAT,ERROR
 CC        CALL HPRINT(801)
@@ -4639,8 +4650,8 @@ c
       COMPLEX BWIGN
 C
 !
-      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_taudcd') /TAUDCD/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       BWIGN(XM,AM,GAMMA)=XM**2/CMPLX(XM**2-AM**2,GAMMA*AM)
@@ -5308,8 +5319,8 @@ C
 C
 C position of decaying particle
 !
-      BIND(C,NAME='tauola_taukle') /TAUKLE/
       BIND(C,NAME='tauola_taupos') /TAUPOS/
+      BIND(C,NAME='tauola_taukle') /TAUKLE/
 !
       IF(KTO.EQ. 1) THEN
         NPS=NP1
@@ -5382,8 +5393,8 @@ C
       REAL  PPI(4)
 C
 !
-      BIND(C,NAME='tauola_taudcd') /TAUDCD/
       BIND(C,NAME='tauola_taupos') /TAUPOS/
+      BIND(C,NAME='tauola_taudcd') /TAUDCD/
 !
       JNPI=MODE-7
 C position of decaying particle
@@ -6612,19 +6623,19 @@ C==============================================================================
 C. GENERAL INITIALIZATION
 C. ======================
 !
-      BIND(C,NAME='tauola_taukle') /TAUKLE/
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_taukle') /TAUKLE/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       IF (IFIRST.EQ.0) THEN
         IFIRST = 1
@@ -6848,17 +6859,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
        U= Q-S-T+M1SQ+M2SQ+M3SQ
        ALP1_RPT = - 3.*S/(1.+BETA_RHO)*
@@ -6940,17 +6951,17 @@ C==============================================================================
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
       REAL U,LAM0_RPT,LAM1_RPT,LAM2_RPT,FF1_RPT,FF2_RPT,FF_REL
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       FF_REL = FPI_RPT*FPI_RPT/(FV_RPT*FV_RPT)
        LAM1_RPT = FPI_RPT*FPI_RPT/(2.D0*SQRT(2.D0)*FA_RPT*GV_RPT)
@@ -7044,17 +7055,17 @@ C******************************************
 C    Initilisation of the mass of the particles
 C*****************************************
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
         call rchl_parameters(5)
 c$$$C we impose isospin symmetry requesting that charged and neutral pion mass
@@ -7131,17 +7142,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       INUM=FF3PISCAL
       return
@@ -7202,17 +7213,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       FF3PISCAL=INUM
       return
@@ -7368,9 +7379,9 @@ C a1 propagator has to be taken with the zero width.
       DATA                    PI /3.141592653589793238462643D0/
 C     AMA1 should be replaced by variable from the rchl namespace.
 !
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
       BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_parmas') /PARMAS/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
 !
       RCHLWIDA1PI=- 1.0/REAL(FA1RCHL(RQQ)*CONJG(FA1RCHL(RQQ)))/RQQ**2
      $            /(96.D0*8.D0*PI**3*AMA1)/(FA_RPT**2*FPI_RPT**2)
@@ -7453,17 +7464,17 @@ C==============================================================================
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
        REAL MMPI_AV2,MMK_2
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       MMPI_AV2 = MMPI_AV**2
       MMK_2 = MMK**2
@@ -7544,17 +7555,17 @@ C==============================================================================
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
        REAL MMPI_AV2
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       MMPI_AV2 = MMPI_AV**2
       IF (XS.GE.(4.*MMPI_AV2)) THEN
@@ -7628,17 +7639,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       TT = 1. - 4.*MMPI_AV**2/SS
       IF (TT.GE.0) THEN
@@ -7734,17 +7745,17 @@ c$$$      x00_3piscal = 36.77*mmpi_av**2
 c$$$c      MMF0 = 0.98
 c$$$
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       dsx = sx
       xsx = sx/4.*sigp(dsx)**2
@@ -7838,17 +7849,17 @@ c$$$      d02_3piscal = -0.000129/mmpi_av**6
 c$$$      x02_3piscal = -21.62*mmpi_av**2
 c$$$c      MMF0 = 0.98
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       dsx = sx
       xsx = sx/4.*sigp(dsx)**2
@@ -7935,17 +7946,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       mm2 = MMPI_AV**2
       xphi = - rsigma**2* LAMB_RCHT(QX,XX,mm2)/(8.*QX)
@@ -8015,17 +8026,17 @@ C==============================================================================
      &                       ,GAMMA0_3PI,GAMMA1_3PI,MMF0
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       XXQ = XQ
       XM2 = XM**2
@@ -8102,18 +8113,18 @@ c*******************************************
       COMMON / QEDPRM /ALFINV,ALFPI,XK0
       REAL*8           ALFINV,ALFPI,XK0
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
       BIND(C,NAME='tauola_qedprm') /QEDPRM/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       if(ss2.gt.(mm1+mm3)**2) then
       betam1m3 = 2.*dsqrt(1.d0 - (mm1 +mm3)**2/ss2)
@@ -8194,18 +8205,18 @@ c*******************************************
       COMMON / QEDPRM /ALFINV,ALFPI,XK0
       REAL*8           ALFINV,ALFPI,XK0
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
       BIND(C,NAME='tauola_qedprm') /QEDPRM/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
         if(ss2.gt.(mm1+mm3)**2) then
       betam1m3 = 2.*dsqrt(1.d0 - (mm1 +mm3)**2/ss2)
@@ -8275,7 +8286,7 @@ C-----------------------------------------------------------------------------
       GO TO 5
     4 Y=0.5d0*Y
       IF(dABS(Y) .GT. DELTA) GOTO 2
-      CALL TAUOLA_PRINT('tauola.f:8278: (suppressed)'//CHAR(0))
+      CALL TAUOLA_PRINT('tauola.f:8289: (suppressed)'//CHAR(0))
 !     PRINT 7
       GAUS=0.d0
       RETURN
@@ -8339,7 +8350,7 @@ C-----------------------------------------------------------------------------
       GO TO 5
     4 Y=0.5d0*Y
       IF(dABS(Y) .GT. DELTA) GOTO 2
-      CALL TAUOLA_PRINT('tauola.f:8342: (suppressed)'//CHAR(0))
+      CALL TAUOLA_PRINT('tauola.f:8353: (suppressed)'//CHAR(0))
 !     PRINT 7
       GAUS2=0.D0
       RETURN
@@ -8559,8 +8570,8 @@ C
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_external') /EXTERNAL/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_precint') /PRECINT/
 !
       XQQA = XQQB
@@ -8600,10 +8611,10 @@ C
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_external') /EXTERNAL/
-      BIND(C,NAME='tauola_precint') /PRECINT/
       BIND(C,NAME='tauola_internal') /INTERNAL/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
+      BIND(C,NAME='tauola_precint') /PRECINT/
 !
       Xlam(x,y,z) = sqrt(abs((x-y-z)**2 - 4.*y*z))
       S1A = S1
@@ -8640,9 +8651,9 @@ C
      *                 ,AMPIZ,AMPI,AMRO,GAMRO,AMA1,GAMA1
      *                 ,AMK,AMKZ,AMKST,GAMKST
 !
-      BIND(C,NAME='tauola_parmas') /PARMAS/
       BIND(C,NAME='tauola_external') /EXTERNAL/
       BIND(C,NAME='tauola_internal') /INTERNAL/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       DGAMQQS1S3 = FFWID3PI(XQQA,XS1A,XS3)
       RETURN
@@ -12749,17 +12760,17 @@ C==============================================================================
      &                       ,alpsig,betasig,gamsig,delsig,rsigma
       INTEGER JJ
 !
+      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
+      BIND(C,NAME='tauola_mass_res') /MASS_RES/
+      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
       BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
       BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
-      BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
-      BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
       BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
-      BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       JJ = FF2PIRHO
       END
@@ -12914,18 +12925,18 @@ C==============================================================================
       INTEGER          J3PI
       COMMON /CHANOPT/ J3PI
 !
-      BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
-      BIND(C,NAME='tauola_chanopt') /CHANOPT/
-      BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
       BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
+      BIND(C,NAME='tauola_chanopt') /CHANOPT/
       BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
-      BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
       BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
+      BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
+      BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
+      BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
          IF(KAK.EQ.4) THEN
 C  /MASS_RES/; resonances parameters initialization:
@@ -13225,18 +13236,18 @@ C==============================================================================
       DOUBLE PRECISION  P1,P2,P3,P4,P5,P6,P7,P8,P9,P10,P11,P12,P13,P14,P15,P16
       DATA IUSE /0/
 !
-      BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
-      BIND(C,NAME='tauola_params') /PARAMS/
-      BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
-      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
-      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
-      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
       BIND(C,NAME='tauola_ff0sckpi') /FF0SCKPI/
-      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
       BIND(C,NAME='tauola_mass_res') /MASS_RES/
-      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
-      BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
       BIND(C,NAME='tauola_rcht_3pi') /RCHT_3PI/
+      BIND(C,NAME='tauola_params') /PARAMS/
+      BIND(C,NAME='tauola_mass_stable') /MASS_STABLE/
+      BIND(C,NAME='tauola_par_kkpi') /PAR_KKPI/
+      BIND(C,NAME='tauola_kpisc_em') /KPISC_EM/
+      BIND(C,NAME='tauola_version_vecff') /VERSION_VECFF/
+      BIND(C,NAME='tauola_par_kpi') /PAR_KPI/
+      BIND(C,NAME='tauola_par_rhoprime') /PAR_RHOPRIME/
+      BIND(C,NAME='tauola_scal_3pi') /SCAL_3PI/
+      BIND(C,NAME='tauola_res_mixing_rcht') /RES_MIXING_RCHT/
 !
       IF(IUSE.EQ.0) RETURN
       IF (IMODE.EQ.-1) THEN
@@ -13618,11 +13629,11 @@ CAM   DATA JLIST  /    1,     2,     3,     4,     5,     6,     7,
 *
 C
 !
-      BIND(C,NAME='tauola_taukle') /TAUKLE/
-      BIND(C,NAME='tauola_parmas') /PARMAS/
+      BIND(C,NAME='tauola_decpar') /DECPAR/
       BIND(C,NAME='tauola_taubra') /TAUBRA/
       BIND(C,NAME='tauola_taudcd') /TAUDCD/
-      BIND(C,NAME='tauola_decpar') /DECPAR/
+      BIND(C,NAME='tauola_taukle') /TAUKLE/
+      BIND(C,NAME='tauola_parmas') /PARMAS/
 !
       DIMENSION NOPIK(6,NMODE),NPIK(NMODE)
 *AM   outgoing multiplicity and flavors of multi-pion /multi-K modes

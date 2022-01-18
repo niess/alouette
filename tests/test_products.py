@@ -7,7 +7,7 @@ def test_products():
     '''Test the decay products wrapper'''
 
     # Check the accessors
-    alouette.core.initialise(xk0dec=0)  # Disable radiative corrections
+    alouette.initialise(xk0dec=0)  # Disable radiative corrections
     product = alouette.decay(mode=1)
 
     assert isinstance(product.pid, numpy.ndarray)

@@ -7,7 +7,7 @@ def test_decay():
     '''Test the decay function'''
 
     # Disable radiative corrections
-    alouette.core.initialise(xk0dec=0)
+    alouette.initialise(xk0dec=0)
 
     # Check the pid argument
     product = alouette.decay()

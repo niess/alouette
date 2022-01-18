@@ -8,7 +8,7 @@ def test_undecay():
     '''Test the undecay wrapper'''
 
     # Disable radiative corrections
-    alouette.core.initialise(xk0dec=0)
+    alouette.initialise(xk0dec=0)
 
     # Check the default settings
     assert alouette.undecay.mother == 0

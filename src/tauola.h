@@ -68,6 +68,18 @@ struct tauola_parmas {
 
 extern struct tauola_parmas tauola_parmas;
 
+/* Parametrisation version for decays to 2 and 3 pions.
+ *
+ * This flag allows to switch forth and back between (legacy) CLEO
+ * parameterisation and (new currents) Belle + RChL for decays to 2 and 3 pions.
+ * By default, TAUOLOA is set with iver=1, i.e. Belle + RChL.
+ */
+struct tauola_ipcht {
+        int iver;
+};
+
+extern struct tauola_ipcht tauola_ipcht;
+
 /* TAUOLA weight data.
  *
  * This is an addition to the initial TAUOLA library. The structures below

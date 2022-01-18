@@ -402,8 +402,12 @@ def wrap(sources, includes, outfile):
 !     using the `tauola_` prefix.
 !     ==================================================================
       SUBROUTINE TAUOLA_DECAY(KTO,HX) BIND(C)
-      INTEGER KTO
+      INTEGER KTO,ITMP
       REAL*8 HX(4)
+      COMMON /IPChT/ IVER
+      INTEGER        IVER
+      DATA           IVER/1/
+      BIND(C,NAME='tauola_ipcht') /IPChT/
 !     ==================================================================
 !     External routines needed by TAUOLA
 !     ==================================================================
@@ -429,11 +433,18 @@ def wrap(sources, includes, outfile):
 !     Call the TAUOLA.DEKAY routine
 !     ==================================================================
       IF(KTO.EQ.-1) THEN
+        ITMP=IVER ! Backup version
+        IVER=1    ! Enable new currents
+        CALL RCHL_PARAMETERS(IVER)
         CALL INIMAS()
         CALL INITDK()
         CALL INIPHY(1.0D-1) ! XK0=0.1 is not used
         CALL DEKAY(KTO,HX)
+        IVER=ITMP ! Restore version
       ELSE
+        IF (IVER.EQ.1) THEN
+          CALL RCHL_PARAMETERS(IVER)
+        ENDIF
         CALL DEKAY(KTO,HX)
       ENDIF
       CONTAINS

@@ -1,8 +1,9 @@
+from numbers import Number
 import numpy
 
 from ._core import ffi, lib
 
-__all__ = ('wtmax',)
+__all__ = ('ipcht', 'wtmax',)
 
 
 class wtmax:
@@ -48,3 +49,33 @@ class wtmax:
 
 # Override as class singleton
 wtmax = wtmax()
+
+
+class ipcht:
+    '''TAUOLA new currents flags'''
+
+    def __init__(self):
+        self.wtmax = wtmax
+
+    @property
+    def iver(self):
+        '''Parametrisation version for decays to 2 and 3 pions.
+
+           This flag allows to switch forth and back between (legacy) CLEO
+           parameterisation and (new currents) Belle + RChL for decays to 2 and
+           3 pions.  By default, TAUOLOA is set with iver=1, i.e. Belle + RChL.
+        '''
+        return int(lib.tauola_ipcht.iver)
+
+    @iver.setter
+    def iver(self, v):
+        if isinstance(v, Number):
+            if v in (0, 1):
+                lib.tauola_ipcht.iver = v
+            else:
+                raise ValueError('bad iver')
+        else:
+            raise TypeError('bad iver')
+
+# Override as class singleton
+ipcht = ipcht()
