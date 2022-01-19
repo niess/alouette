@@ -13,7 +13,7 @@ __all__ = ('main', 'PREFIX')
 PREFIX = Path(__file__).parent.resolve()
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--prefix', help='Alouette installation prefix',
                         action='store_true')
@@ -24,7 +24,7 @@ def main():
     parser.add_argument('--cflags', help='Alouette compiler flags',
                         action='store_true')
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.prefix:
         print(PREFIX)
@@ -39,5 +39,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': # pragma: no cover
     main()
