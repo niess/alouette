@@ -173,7 +173,7 @@ def wrap(sources, includes, outfile):
 
             lines.insert(index, '!')
             index += 1
-            for block in blocks:
+            for block in sorted(blocks):
                 cname = block.lower()
                 if not cname.startswith('tauola_'):
                     cname = 'tauola_' + cname
