@@ -61,8 +61,8 @@ ffi.set_source(
     'alouette._core',
     format_source(*HEADERS),
     include_dirs=[f'{PREFIX}/{path}' for path in INCLUDE_PATHS],
-    library_dirs=[str(PREFIX / 'alouette')],
-    extra_link_args=[f'-Wl,-rpath,$ORIGIN/.'],
+    library_dirs=[str(PREFIX / 'alouette/lib')],
+    extra_link_args=[f'-Wl,-rpath,$ORIGIN/lib'],
     libraries=['alouette'],
 )
 ffi.cdef(load_headers(*HEADERS))

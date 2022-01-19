@@ -1,13 +1,27 @@
-PYTHON=  python3
-PACKAGE= _core.abi3.so
-LIB=     libalouette.so
-
-BUILD_DIR= build
-
+# Compiler flags
 CC=     gcc
-LD=     $(CC) -shared
 CFLAGS= -O3 -g -Wall
 SHARED= -fPIC
+
+# OS dependent flags
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    SOEXT=  dylib
+    LD=     $(CC) -dynamiclib -Wl,-install_name,@rpath/libalouette.$(SOEXT)
+    RPATH=  -Wl,-rpath,@loader_path/../lib
+else
+    SOEXT=  so
+    LD=     $(CC) -shared
+    RPATH=  '-Wl,-rpath,$$ORIGIN/../lib'
+endif
+
+# Alouette flags
+PYTHON=  python3
+PACKAGE= _core.abi3.$(SOEXT)
+LIB=     libalouette.$(SOEXT)
+
+# Build flags
+BUILD_DIR= build
 
 
 .PHONY: lib
@@ -77,12 +91,12 @@ lib/$(LIB): $(ALOUETTE_OBJS) $(TAUOLA_OBJS) | libdir
 
 # Build the package
 alouette/$(PACKAGE): lib/$(LIB) $(ALOUETTE_INCLUDES) src/build-alouette.py setup.py
-	@cd alouette && ln -fs ../lib/$(LIB)
+	@cd alouette && ln -fs ../lib
 	$(PYTHON) setup.py build --build-lib .
 
 
 # Build examples
-EXAMPLES_CFLAGS= $(CFLAGS) -Iinclude -Llib -Wl,-rpath $(PWD)/lib
+EXAMPLES_CFLAGS= $(CFLAGS) -Iinclude -Llib $(RPATH)
 EXAMPLES_LDFLAGS= -lalouette -lm
 
 examples: bin/example-forward bin/example-backward

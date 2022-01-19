@@ -71,7 +71,12 @@ def main():
         setup_requires=['cffi>=1.0.0', 'pcpp>=1.22'],
         cffi_modules=['src/build-alouette.py:ffi'],
         install_requires=['cffi>=1.0.0', 'numpy'],
-        package_data={'alouette': ['libalouette.*']},
+        package_data={'alouette': ['lib/libalouette.*', 'include/*.h']},
+        entry_points={
+            'console_scripts': [
+                'alouette-config = alouette.__main__:main',
+            ],
+        },
     )
 
 
