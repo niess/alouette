@@ -12,8 +12,7 @@ yum install -y libffi-devel
 $PYTHON -m pip install --target=dist/site-packages -U cffi pcpp
 export PYTHONPATH=/work/dist/site-packages
 
-export ALOUETTE_VERSION=$ALOUETTE_VERSION
-echo "building libalouette \$ALOUETTE_VERSION with \$(gcc --version | head -n 1)"
+echo "building libalouette with \$(gcc --version | head -n 1)"
 make PYTHON=$PYTHON
 
 echo "building Python wheel"

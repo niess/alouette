@@ -227,6 +227,16 @@ unsigned long alouette_random_seed(void);
 void alouette_random_set(
     unsigned long * seed);
 
+/**
+ * Get library version string.
+ */
+const char * alouette_version(void);
+
+/**
+ * Get library git revision.
+ */
+const char * alouette_git_revision(void);
+
 #ifdef __cplusplus
 }
 #endif

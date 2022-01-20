@@ -33,12 +33,21 @@
 /* TAUOLA external symbols. */
 #include "tauola.h"
 
+/* Version tags, set by the Makefile. */
+#ifndef ALOUETTE_VERSION
+#define ALOUETTE_VERSION "undefined"
+#endif
+
+#ifndef ALOUETTE_GIT_REVISION
+#define ALOUETTE_GIT_REVISION "undefined"
+#endif
+
 #ifndef M_PI
 /* Define pi, if unknown. */
 #define M_PI 3.14159265358979323846
 #endif
 
-/*  Extra debugging options, on linux. */
+/*  Extra debugging options. */
 #ifdef ALOUETTE_DEBUG
 #ifndef __USE_GNU
 #define __USE_GNU
@@ -46,7 +55,7 @@
 #include <fenv.h>
 #endif
 
-/* Some TAUOLA common blocks and routine(s) */
+/* Some TAUOLA internal common blocks and routine(s) */
 extern struct {
     int jak1, jak2, jakp, jakm, ktom;
 } tauola_jaki;
@@ -1463,4 +1472,16 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         products->weight = weight;
 
         return ALOUETTE_RETURN_SUCCESS;
+}
+
+/** Get library version string. */
+const char * alouette_version(void)
+{
+        return ALOUETTE_VERSION;
+}
+
+/* Get library git revision. */
+const char * alouette_git_revision(void)
+{
+        return ALOUETTE_GIT_REVISION;
 }

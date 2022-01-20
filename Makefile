@@ -23,6 +23,9 @@ LIB=     libalouette.$(SOEXT)
 # Build flags
 BUILD_DIR= build
 
+# Version flags
+ALOUETTE_VERSION=      $(shell cat VERSION)
+ALOUETTE_GIT_REVISION= $(shell git describe --match=NeVeRmAtCh --always --dirty)
 
 .PHONY: lib
 lib: lib/$(LIB)
@@ -80,9 +83,12 @@ $(TAUOLA_DIR):
 # Build the library
 ALOUETTE_INCLUDES= include/alouette.h src/tauola.h
 ALOUETTE_OBJS=     $(BUILD_DIR)/alouette.o
+ALOUETTE_CFLAGS=   $(CFLAGS) \
+                   -DALOUETTE_VERSION=\"$(ALOUETTE_VERSION)\" \
+                   -DALOUETTE_GIT_REVISION=\"$(ALOUETTE_GIT_REVISION)\"
 
 $(BUILD_DIR)/alouette.o: src/alouette.c $(ALOUETTE_INCLUDES) | build
-	$(CC) -o $@ $(CFLAGS) $(SHARED) -Iinclude -c $<
+	$(CC) -o $@ $(ALOUETTE_CFLAGS) $(SHARED) -Iinclude -c $<
 
 
 lib/$(LIB): $(ALOUETTE_OBJS) $(TAUOLA_OBJS) | libdir
