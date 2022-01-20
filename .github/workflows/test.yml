@@ -1,4 +1,4 @@
-name: Build
+name: Test
 on: [push, pull_request]
 
 jobs:
@@ -74,3 +74,23 @@ jobs:
       - uses: geekyeggo/delete-artifact@v1
         with:
           name: temporary-binaries
+
+  Publish:
+    needs: Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build wheel
+      run: |
+        if [[ "$(./dist/update-pypi.py)" == 'True' ]]
+        then
+          ./dist/build-wheel.sh
+        fi
+
+    - name: Upload to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.PYPI_TOKEN }}
+        packages_dir: dist/wheels

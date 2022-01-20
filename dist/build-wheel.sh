@@ -23,7 +23,8 @@ auditwheel repair dist/*.whl
 
 echo "cleaning build artifacts"
 make dist-clean
-mv wheelhouse/*.whl dist
+mkdir -p dist/wheels
+mv wheelhouse/*.whl dist/wheels
 rm -rf wheelhouse
 chown --recursive $(id -u):$(id -g) alouette build dist lib
 END
