@@ -1,0 +1,93 @@
+name: OSX
+on: [push, pull_request]
+
+jobs:
+  Test:
+    runs-on: macos-10.15
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install build dependencies
+        run: |
+          pip install cffi pcpp
+
+      - name: Build the library, the package and the examples
+        run: |
+          make CC=gcc-9
+          make package CC=gcc-9 PYTHON=python3.9
+          make examples CC=gcc-9
+
+      - name: Run the examples
+        run: |
+          ./bin/example-forward
+          ./bin/example-backward
+
+      - name: Install runtime dependencies
+        run: |
+          pip install cffi numpy      # Package dependencies
+          pip install coverage pytest # Tests dependencies
+
+      - name: Test with pytest
+        run: |
+          PYTHON=python3.9 ./tests/run.sh
+
+      - name: Check PyPI
+        run: |
+          echo "UPDATE_PYPI=$(./dist/update-pypi.py)" >> $GITHUB_ENV
+
+      - name: Install dist dependencies
+        if: env.UPDATE_PYPI == 'True'
+        run: |
+          pip install wheel
+
+      - name: Build wheel
+        if: env.UPDATE_PYPI == 'True'
+        run: |
+          CC=gcc-9 PYTHON=python3.9 ./dist/build-wheel.sh
+
+      - uses: actions/upload-artifact@v2
+        if: env.UPDATE_PYPI == 'True'
+        with:
+          name: temporary-wheels
+          path: |
+            dist/wheels/*.whl
+          retention-days: 1
+
+  Publish:
+    needs: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check PyPI
+        run: |
+          echo "UPDATE_PYPI=$(./dist/update-pypi.py --system=Darwin)" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v2
+        if: env.UPDATE_PYPI == 'True'
+        with:
+          name: temporary-wheels
+          path: dist/wheels
+
+      - name: Upload to PyPI
+        if: env.UPDATE_PYPI == 'True'
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages_dir: dist/wheels
+
+  Clean:
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: [Publish, Test]
+
+    steps:
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name: temporary-wheels

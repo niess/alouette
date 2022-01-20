@@ -1,17 +1,19 @@
 #! /usr/bin/env python3
+import argparse
 import json
+import platform
 import ssl
 from urllib.request import urlopen
 
 
-def get_local_version():
-    '''Get local version tag'''
+def update_pypi(system=None):
+    '''Check if PyPI needs to be updated'''
+
+    # Get local version tag
     with open('VERSION') as f:
-        return f.read().strip()
+        version = f.read().strip()
 
-
-def get_pypi_version():
-    '''Get PypI (remote) version tag'''
+    # Get meta from PyPI
     try:
         _create_unverified_https_context = ssl._create_unverified_context
     except AttributeError:
@@ -20,15 +22,33 @@ def get_pypi_version():
         ssl._create_default_https_context = _create_unverified_https_context
 
     meta = json.load(urlopen('https://pypi.org/pypi/alouette/json'))
-    return meta['info']['version']
 
+    # Look for an existing wheel
+    try:
+        data = meta['releases'][version]
+    except KeyError:
+        return True
 
-def update_pypi():
-    '''Check if PyPI needs to be updated'''
-    loc = get_local_version()
-    pypi = get_pypi_version()
-    print(loc != pypi)
+    if system is None:
+        system = platform.system()
+
+    if system == 'Linux':
+        tag = 'manylinux'
+    elif system == 'Darwin':
+        tag = 'macosx'
+    else:
+        return False
+
+    for d in data:
+        if tag in d['filename']:
+            return False
+    else:
+        return True
 
 
 if __name__ == '__main__':
-    update_pypi()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--system', help='target system')
+    args = parser.parse_args()
+
+    print(update_pypi(args.system))

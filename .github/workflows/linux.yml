@@ -1,4 +1,4 @@
-name: Test
+name: Linux
 on: [push, pull_request]
 
 jobs:
@@ -33,7 +33,6 @@ jobs:
           path: |
             alouette/*.so
             alouette/lib/*.so
-            alouette/version.py
           retention-days: 1
 
   Test:
@@ -82,14 +81,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Build wheel
+    - name: Check PyPI
       run: |
-        if [[ "$(./dist/update-pypi.py)" == 'True' ]]
-        then
-          ./dist/build-wheel.sh
-        fi
+        echo "UPDATE_PYPI=$(./dist/update-pypi.py)" >> $GITHUB_ENV
+
+    - name: Build wheel
+      if: env.UPDATE_PYPI == 'True'
+      run: |
+        ./dist/build-wheel.sh
 
     - name: Upload to PyPI
+      if: env.UPDATE_PYPI == 'True'
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.PYPI_TOKEN }}

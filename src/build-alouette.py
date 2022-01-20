@@ -2,6 +2,7 @@ from cffi import FFI
 import io
 import os
 from pathlib import Path
+import platform
 from pcpp.preprocessor import Preprocessor
 import re
 
@@ -28,9 +29,7 @@ def format_source(*paths):
 
 
 def load_headers(*paths):
-    '''
-    Load the given header file(s) and run a C preprocessor.
-    '''
+    '''Load the given header file(s) and run a C preprocessor.'''
     headers = []
     for path in paths:
         with open(PREFIX / path) as f:
@@ -56,13 +55,19 @@ def load_headers(*paths):
     return headers
 
 
+if platform.system() == 'Linux':
+    ldflags = ['-Wl,-rpath,$ORIGIN/lib']
+else:
+    ldflags = ['-Wl,-rpath,@loader_path/lib']
+
+
 ffi = FFI()
 ffi.set_source(
     'alouette._core',
     format_source(*HEADERS),
     include_dirs=[f'{PREFIX}/{path}' for path in INCLUDE_PATHS],
     library_dirs=[str(PREFIX / 'alouette/lib')],
-    extra_link_args=[f'-Wl,-rpath,$ORIGIN/lib'],
+    extra_link_args=ldflags,
     libraries=['alouette'],
 )
 ffi.cdef(load_headers(*HEADERS))
