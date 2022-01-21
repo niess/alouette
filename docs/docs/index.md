@@ -1,10 +1,10 @@
 # Introduction
 
-Alouette is a thin [TAUOLA][TAUOLA] wrapper for simulating single $\tau$ decays.
-It can operate in forward or in [backward Monte Carlo][BMC] mode.  Alouette is
-built over [TAUOLA universal interface][tauolapp] (version 1.1.8, for LHC)
-Fortran's source. It can be used as a C library (*libalouette*) or as a Python3
-([alouette][alouette_py]) package.
+Alouette is a thin [TAUOLA][TAUOLA] wrapper for simulating single $\tau$
+decays.  It can operate in forward or in [backward Monte Carlo][BMC] mode.
+Alouette is built over [TAUOLA universal interface][tauolapp] (version 1.1.8,
+for LHC) Fortran's source. It can be used as a C library (*libalouette*) or as
+a Python 3 ([alouette][alouette_py]) package.
 {: .justify}
 
 ## Source and license
@@ -18,7 +18,7 @@ public domain license allowing them to be copied without any restriction.
 ## Issues
 
 Alouette results have been carefully validated through various tests including
-comparisons to [Tauola++][tauolapp]. Updates are unit tested using [GitHub
+comparisons to [Tauola++][tauolapp]. Code updates are unit tested using [GitHub
 CI][github_ci].  Yet, whenever you were (un)lucky to come accross a bug, please
 consider reporting it as a [GitHub issue][issues].
 {: .justify}

@@ -3,7 +3,7 @@
 ## The easy way
 
 Binary distributions of Alouette are avaible from [PyPI][alouette_py]. The
-Python package and the C library can be installed using pip, e.g. as:
+Python 3 package and the C library can be installed using pip, e.g. as:
 {: .justify}
 
 ```bash
@@ -12,7 +12,7 @@ pip3 install alouette
 
 !!! note
     The C library, *libalouette*, is shipped with the [alouette][alouette_py]
-    Python package. Installing the Python package also installs
+    Python 3 package. Installing the Python package also installs
     *alouette-config*, a configuration script that simplifies linking against
     the C library, e.g. using `$(alouette-config --cflags)` and
     `$(alouette-config --libs)`.

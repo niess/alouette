@@ -18,6 +18,11 @@ are shipped with the [source][alouette_source].
     numbered `-15`.
     {: .justify}
 
+!!! note
+    Alouette uses the same natural system of units than TAUOLA. E.g. momenta
+    are expressed in $GeV / c$.
+    {: .justify}
+
 
 <div markdown="1" class="shaded-box fancy">
 ## Decay function
@@ -29,7 +34,7 @@ below.
 {: .justify}
 
 !!! note
-    &tau; decay modes are indexed according to TAUOLA, see e.g. Appendix C of
+    $\tau$ decay modes are indexed according to TAUOLA, see e.g. Appendix C of
     [Davidson et al. (2012)][Davidson2012] for a description of available modes.
     If set to zero, then the decay is randomised over all modes, according to
     branching ratios.
@@ -60,13 +65,13 @@ alouette.decay(mode=None, pid=None, momentum=None, polarisation=None)
 
 The *undecay* function simulates a $\tau$ decay from a given decay product
 using the [Backward Monte Carlo][BMC] technique (BMC). The spin polarisation of
-the primary $\tau$ can be provided a posteriori as a callback.  Set
+the primary $\tau$ can be provided a posteriori as a callback function.  Set
 *polarisation* to `NULL` (`None`) in order to ignore spin effects. The [decay
 products](#decay-products) format is described below.
 {: .justify}
 
 !!! note
-    &tau; decay modes are indexed according to TAUOLA, see e.g. Appendix C of
+    $\tau$ decay modes are indexed according to TAUOLA, see e.g. Appendix C of
     [Davidson et al. (2012)][Davidson2012] for a description of available modes.
     If set to zero, then the decay is randomised over all modes, according to
     branching ratios.
@@ -169,7 +174,7 @@ class alouette.Products:
 
 The C library functions return a status code indicating success or failure, as
 described [below](#c-return-codes). In the Python package, internal C library
-errors result in raising a `ValueError` or `RuntimeError` exception.
+errors result in raising a `ValueError` or a `RuntimeError` exception.
 {: .justify}
 
 ### C return codes
@@ -270,7 +275,7 @@ alouette.random.set(seed=None)
 ## Tauola data
 
 For more advanced usage, one might need to access TAUOLA's internal data. Those
-are exposed to C users with the `tauola_` prefix. E.g., the `PARMAS` common
+are exposed to C users with the `tauola_` prefix. E.g., the `/PARMAS/` common
 block can be accessed as `tauola_parmas` C structure. For Python users, some of
 these data are also wrapped in `alouette.tauola` submodule. They can be
 accessed as attributes, using the usual syntax. E.g. `tauola.parmas.amtau`
