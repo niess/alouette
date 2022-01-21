@@ -103,7 +103,7 @@ struct alouette_products {
  * code is returned as detailed below.
  *
  * Simulate a tau decay with TAUOLA. An optionnal polarisation 3-vector can
- * be provided. If `ǸULL` spin effects are not simulated.
+ * be provided. If `NULL` spin effects are not simulated.
  *
  * __Note__ : tau decay modes are indexed according to TAUOLA. If set to zero,
  * then the decay mode is randomised over all available modes, according to

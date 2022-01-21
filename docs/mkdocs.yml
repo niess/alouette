@@ -1,0 +1,31 @@
+site_name: Alouette
+site_description: A TAUOLA wrapper with backward decays
+site_author: Valentin Niess
+copyright: LGPL-3.0
+
+repo_url: https://github.com/niess/alouette
+edit_uri: edit/master/docs/docs
+
+nav:
+  - Introduction: index.md
+  - Installation: installation.md
+  - Alouette API: api.md
+
+theme:
+  name: readthedocs
+  navigation_depth: 2
+  highlightjs: true
+  hljs_languages:
+    - C
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.arithmatex # pip install pymdown-extensions
+
+extra_css: [extra.css]
+
+extra_javascript:
+  - mathjax-config.js
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
