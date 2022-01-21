@@ -24,7 +24,7 @@ make PYTHON=$PYTHON
 
 echo "building Python wheel"
 make package PYTHON=$PYTHON
-$PYTHON setup.py bdist_wheel --py-limited-api=cp37
+$PYTHON setup.py bdist_wheel --py-limited-api=cp36
 auditwheel show dist/*.whl
 auditwheel repair dist/*.whl
 
@@ -60,7 +60,7 @@ else
     make package PYTHON=$PYTHON CC=$CC
 
     echo "building Python wheel"
-    $PYTHON setup.py bdist_wheel --py-limited-api=cp37
+    $PYTHON setup.py bdist_wheel --py-limited-api=cp36
 
     echo "cleaning build artifacts"
     mkdir -p dist/wheels
