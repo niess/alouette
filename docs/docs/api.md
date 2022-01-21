@@ -173,8 +173,13 @@ class alouette.Products:
 ## Errors handling
 
 The C library functions return a status code indicating success or failure, as
-described [below](#c-return-codes). In the Python package, internal C library
-errors result in raising a `ValueError` or a `RuntimeError` exception.
+described [below](#c-return-codes). When an error occurs, the `alouette_message`
+function can be used in order to fetch the last error message, as a C string.
+{: .justify}
+
+In the Python package, errors are managed automatically. Internal C library
+errors result in raising a `ValueError` or a `RuntimeError` exception, with
+the corresponding error message.
 {: .justify}
 
 ### C return codes
@@ -188,6 +193,9 @@ enum alouette_return {
         /** A TAUOLA error occured. */
         ALOUETTE_RETURN_TAUOLA_ERROR
 };
+
+/* Get the last (error) message(s). */
+const char * alouette_message(void);
 ```
 </div>
 

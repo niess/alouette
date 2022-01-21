@@ -627,7 +627,7 @@ enum alouette_return alouette_initialise(
         tauola_taupos.npa = 1;
         tauola_taupos.npb = 1;
 
-        /* Initialise the built-in PRNG with an arbitrary seed for
+        /* Initialise the built-in PRNG with a pre-selected seed for
          * TAUOLA warmup. First, backup the current random state.
          */
         random_cb * random = alouette_random;
@@ -635,7 +635,7 @@ enum alouette_return alouette_initialise(
         struct random_stream tmp_random;
         memcpy(&tmp_random, &_random_stream, sizeof tmp_random);
 
-        unsigned long tmp_seed = (init_seed == NULL) ? 1357894 : *init_seed;
+        unsigned long tmp_seed = (init_seed == NULL) ? 3900454504 : *init_seed;
         alouette_random_set(&tmp_seed);
 
         /* Initialise the decay routine. */
