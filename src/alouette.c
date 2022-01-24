@@ -364,29 +364,36 @@ static void channel_configure(int mode, int sub)
         memcpy(&tauola_taukle, &_channels.default_taukle,
             sizeof(struct tauola_taukle));
 
+        /* TAUOLA uses strict (LT) comparisons when randomising sub-modes. Thus,
+         * prng = 1 results in a failure even though the BR is 1, since (1.LT.1)
+         * is false. In order to patch this, BRs are slightly offset.
+         */
+        const double one = 1. + FLT_EPSILON;
+        const double zero = -FLT_EPSILON;
+
         if (sub) {
                 if (mode == 5) {
                         if (sub == 1) {
-                                tauola_taukle.bra1 = 1.;
+                                tauola_taukle.bra1 = one;
                         } else {
-                                tauola_taukle.bra1 = 0.;
+                                tauola_taukle.bra1 = zero;
                         }
                 } else if (mode == 7) {
                         if (sub == 1) {
-                                tauola_taukle.brks = 1.;
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
+                                tauola_taukle.brks = one;
+                                tauola_taukle.brk0 = one;
+                                tauola_taukle.brk0b = one;
                         } else if (sub == 2) {
-                                tauola_taukle.brks = 1.;
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
+                                tauola_taukle.brks = one;
+                                tauola_taukle.brk0 = zero;
+                                tauola_taukle.brk0b = zero;
                         } else {
-                                tauola_taukle.brks = 0.;
+                                tauola_taukle.brks = zero;
                         }
                 } else if (mode == 15) {
                         if (sub == 1) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
+                                tauola_taukle.brk0 = one;
+                                tauola_taukle.brk0b = one;
                         } else if (sub == 2) {
                                 const double p0 =
                                     _channels.default_taukle.brk0 *
@@ -395,23 +402,23 @@ static void channel_configure(int mode, int sub)
                                     (1. - _channels.default_taukle.brk0) *
                                     _channels.default_taukle.brk0b;
                                 if (alouette_random() * (p0 + p1) <= p0) {
-                                        tauola_taukle.brk0 = 1.;
-                                        tauola_taukle.brk0b = 0.;
+                                        tauola_taukle.brk0 = one;
+                                        tauola_taukle.brk0b = zero;
                                 } else {
-                                        tauola_taukle.brk0 = 0.;
-                                        tauola_taukle.brk0b = 1.;
+                                        tauola_taukle.brk0 = zero;
+                                        tauola_taukle.brk0b = one;
                                 }
                         } else {
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
+                                tauola_taukle.brk0 = zero;
+                                tauola_taukle.brk0b = zero;
                         }
                 } else if ((mode == 16) || (mode == 19) || (mode == 22)) {
                         if (sub == 1) {
-                                tauola_taukle.brk0 = 1.;
-                                tauola_taukle.brk0b = 1.;
+                                tauola_taukle.brk0 = one;
+                                tauola_taukle.brk0b = one;
                         } else {
-                                tauola_taukle.brk0 = 0.;
-                                tauola_taukle.brk0b = 0.;
+                                tauola_taukle.brk0 = zero;
+                                tauola_taukle.brk0b = zero;
                         }
                 }
         }
