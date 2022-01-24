@@ -417,38 +417,9 @@ static void channel_configure(int mode, int sub)
         }
 }
 
-/* Select a decay channel in forward Monte Carlo. */
-static enum alouette_return channel_select_forward(int * mode_ptr)
+/* Select candidate channels for a given mode and submode */
+static int channel_get_candidates(int mode, int sub, int candidates[N_CHANNELS])
 {
-        enum alouette_return rc;
-        int sub;
-        if ((rc = channel_parse(mode_ptr, &sub)) == ALOUETTE_RETURN_SUCCESS) {
-                channel_configure(*mode_ptr, sub);
-        }
-        return rc;
-}
-
-/* Select a decay channel for the BMC procedure. */
-static enum alouette_return channel_select_backward(int daughter,
-    int * mode_ptr, int * mother_ptr, int * multiplicity_ptr,
-    double * weight_ptr)
-{
-        int converse = daughter_converse(daughter);
-        int id = daughter_index(daughter);
-        int ic = daughter_index(converse);
-
-        if ((id < 0) && (ic < 0)) {
-                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
-                    "bad daughter pid (%d)", daughter);
-        }
-
-        int mode = *mode_ptr, sub;
-        enum alouette_return rc;
-        if ((rc = channel_parse(&mode, &sub)) != ALOUETTE_RETURN_SUCCESS) {
-                return rc;
-        }
-
-        int candidates[N_CHANNELS];
         int n_candidates = 0;
         if (mode == 0) {
                 int i;
@@ -480,6 +451,99 @@ static enum alouette_return channel_select_backward(int daughter,
                 candidates[0] = mode - 1;
                 n_candidates = 1;
         }
+
+        return n_candidates;
+}
+
+/* Select a decay channel in forward Monte Carlo. */
+static enum alouette_return channel_select_forward(int * mode_ptr)
+{
+        enum alouette_return rc;
+        int sub;
+        if ((rc = channel_parse(mode_ptr, &sub)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
+        }
+
+        int mode = *mode_ptr;
+        int candidates[N_CHANNELS];
+        const int n_candidates = channel_get_candidates(mode, sub, candidates);
+
+        /* Randomise the decay channels with Alouette since there is a bias
+         * for sub-modes in TAUOLA's procedure. I.e. sub-modes are not *exactly*
+         * selected according to input BRs. Maybe this is the ``DADMAA/DPHSAA
+         * problem'' commented in the Fortran source?
+         */
+
+        /* Compute the total weight */
+        double total_weight = 0.;
+        int i;
+        for (i = 0; i < n_candidates; i++) {
+                const int ii = candidates[i];
+                total_weight += _channels.branching_ratio[ii];
+        }
+
+        if (total_weight == 0.) {
+                /* This should not happen */
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "unexpected null weight (mode = %d)", mode);
+        }
+
+        /* Select the decay channel */
+        double r;
+        if (n_candidates == 1) {
+                r = 0.;
+        } else {
+                r = alouette_random();
+                if (r < 0) r = 0.;
+                else if (r > 1) r = 1.;
+                r *= total_weight;
+        }
+
+        int channel = -1;
+        double w = 0.;
+        for (i = 0; i < n_candidates; i++) {
+                const int ii = candidates[i];
+                w += _channels.branching_ratio[ii];
+                if (r <= w) {
+                        channel = ii;
+                        break;
+                }
+        }
+        if (channel == -1) {
+                /* This should not happen */
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "unexpected channel (mode = %d)", mode);
+        }
+
+        *mode_ptr = _channels.mode[channel];
+        sub = _channels.subchannel[channel];
+        channel_configure(*mode_ptr, sub);
+
+        return ALOUETTE_RETURN_SUCCESS;
+}
+
+/* Select a decay channel for the BMC procedure. */
+static enum alouette_return channel_select_backward(int daughter,
+    int * mode_ptr, int * mother_ptr, int * multiplicity_ptr,
+    double * weight_ptr)
+{
+        int converse = daughter_converse(daughter);
+        int id = daughter_index(daughter);
+        int ic = daughter_index(converse);
+
+        if ((id < 0) && (ic < 0)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                    "bad daughter pid (%d)", daughter);
+        }
+
+        int mode = *mode_ptr, sub;
+        enum alouette_return rc;
+        if ((rc = channel_parse(&mode, &sub)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
+        }
+
+        int candidates[N_CHANNELS];
+        const int n_candidates = channel_get_candidates(mode, sub, candidates);
 
         /* Compute the total weight */
         int mother = *mother_ptr;
@@ -1133,15 +1197,15 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
         message_reset();
 
-        /* Parse and check the decay mode. */
-        if ((rc = channel_select_forward(&mode)) != ALOUETTE_RETURN_SUCCESS) {
-                return rc;
-        }
-
         /* Check the mother pid */
         if (abs(pid) != 15) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                     "bad mother pid (%d)", pid);
+        }
+
+        /* Parse and check the decay mode. */
+        if ((rc = channel_select_forward(&mode)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         /* Decay a tau in its rest frame. */
