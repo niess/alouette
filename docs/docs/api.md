@@ -13,7 +13,7 @@ are shipped with the [source][alouette_source].
     {: .justify}
 
 !!! note
-    Alouette uses [PDG IDs](PID) (PIDs) for labeling particles. I.e.  a
+    Alouette uses [PDG IDs][PID] (PIDs) for labeling particles. I.e.  a
     $\tau$-lepton has `pid = 15` while its anti-particle, a $\tau^+$, is
     numbered `-15`.
     {: .justify}
@@ -28,16 +28,16 @@ are shipped with the [source][alouette_source].
 ## Decay function
 
 The *decay* function simulates a $\tau$ decay with TAUOLA. An optionnal
-polarisation 3-vector can be provided. If `NULL` (`None`), then spin effects
-are not simulated. The [decay products](#decay-products) format is described
-below.
+polarisation 3-vector can be provided. If the latter is `NULL` (`None`), then
+spin effects are not simulated. The format of [decay products](#decay-products)
+is described below.
 {: .justify}
 
 !!! note
     $\tau$ decay modes are indexed according to TAUOLA, see e.g. Appendix C of
     [Davidson et al. (2012)][Davidson2012] for a description of available modes.
-    If set to zero, then the decay is randomised over all modes, according to
-    branching ratios.
+    If *mode* is set to zero, then the decay is randomised over all modes,
+    according to branching ratios.
     {: .justify}
 
 ### C synopsis
@@ -63,23 +63,23 @@ alouette.decay(mode=None, pid=None, momentum=None, polarisation=None)
 <div markdown="1" class="shaded-box fancy">
 ## Undecay function
 
-The *undecay* function simulates a $\tau$ decay from a given decay product
-using the [Backward Monte Carlo][BMC] technique (BMC). The spin polarisation of
-the primary $\tau$ can be provided a posteriori as a callback function.  Set
-*polarisation* to `NULL` (`None`) in order to ignore spin effects. The [decay
-products](#decay-products) format is described below.
+The *undecay* function simulates a $\tau$ decay from a given decay product using
+the [Backward Monte Carlo][BMC] technique (BMC). The spin polarisation of the
+primary $\tau$ can be provided a posteriori as a callback function.  Setting
+*polarisation* to `NULL` (`None`) results in spin effects to be ignored. The
+format of [decay products](#decay-products) is described below.
 {: .justify}
 
 !!! note
     $\tau$ decay modes are indexed according to TAUOLA, see e.g. Appendix C of
     [Davidson et al. (2012)][Davidson2012] for a description of available modes.
-    If set to zero, then the decay is randomised over all modes, according to
-    branching ratios.
+    If *mode* is set to zero, then the decay is randomised over all modes,
+    according to branching ratios.
     {: .justify}
 
 !!! warning
-    The daughter *momentum* must be non null in a backward decay. I.e. center
-    of mass backward decays cannot be simulated.
+    The daughter *momentum* must be non null in a backward decay. I.e. it is not
+    possible to backward simulate center of mass decays.
     {: .justify}
 
 ### Configuration parameters
@@ -113,7 +113,7 @@ alouette.undecay(mode=None, pid=None, momentum=None, polarisation=None)
 ```
 
 !!! note
-    Default is `mode=0` and `pid=16`, a $\nu_tau$ decay product considering all
+    Default is `mode=0` and `pid=16`, a $\nu_\tau$ decay product considering all
     modes.
     {: .justify}
 </div>
@@ -122,11 +122,10 @@ alouette.undecay(mode=None, pid=None, momentum=None, polarisation=None)
 <div markdown="1" class="shaded-box fancy">
 ## Decay products
 
-Decay products are stored in a dedicated data structure. The daughters *pid*
-and 4-momentum, *P*, are accessed as arrays. The decay *polarimeter* vector is
-also provided for advanced usage, e.g. in order to simulate spin-spin
-corellations in $\tau^-\tau^+$ pairs, following [Jadach et al.
-(1991)][Jadach1991].
+Decay products are stored in a dedicated data structure. The daughters PIDs and
+4-momenta, *P*, are accessed as arrays. The decay *polarimeter* vector is also
+provided for advanced usage, e.g. in order to simulate spin-spin corellations in
+$\tau^-\tau^+$ pairs, following [Jadach et al.  (1991)][Jadach1991].
 {: .justify}
 
 !!! note
