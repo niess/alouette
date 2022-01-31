@@ -1428,12 +1428,16 @@ enum alouette_return alouette_undecay(int mode, int daughter,
                         /* Draw the direction of the polarimeter according to
                          * the daughter momentum and the bias polarisation.
                          */
-                        const double z = alouette_random();
-                        double delta2 = 4 * s * z + (s - 1.) * (s - 1.);
-                        if (delta2 <= FLT_EPSILON) delta2 = 0.;
-                        double cos_theta = (sqrt(delta2) - 1.) / s;
-                        if (cos_theta < -1.) cos_theta = -1.;
-                        else if (cos_theta > 1.) cos_theta = 1.;
+                        double cos_theta;
+                        for (;;) {
+                                const double z = alouette_random();
+                                double delta2 = 4 * s * z + (s - 1.) * (s - 1.);
+                                if (delta2 <= FLT_EPSILON) delta2 = 0.;
+                                cos_theta = (sqrt(delta2) - 1.) / s;
+                                if (cos_theta <= -1. + FLT_EPSILON) continue;
+                                else break;
+                        }
+                        if (cos_theta > 1.) cos_theta = 1.;
                         weight /= 1. + s * cos_theta;
 
                         double norm = bias / sqrt(momentum2);
