@@ -91,3 +91,17 @@ def test_undecay():
         alouette.undecay.bias = 2
     alouette.undecay.bias = 1
     assert alouette.undecay.bias == 1
+
+    # Check the scheme parameter
+    assert alouette.undecay.scheme == 'cartesian'
+    alouette.undecay.scheme = 'spherical'
+    assert alouette.undecay.scheme == 'spherical'
+    alouette.undecay.scheme = 'energy'
+    assert alouette.undecay.scheme == 'energy'
+    alouette.undecay.scheme = 'cartesian'
+    assert alouette.undecay.scheme == 'cartesian'
+    with pytest.raises(TypeError):
+        alouette.undecay.scheme = 1
+    with pytest.raises(ValueError):
+        alouette.undecay.scheme = 'nothing'
+

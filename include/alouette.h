@@ -195,6 +195,30 @@ extern int alouette_undecay_mother;
  */
 extern double alouette_undecay_bias;
 
+/** Schemes the Backward Monte Carlo (BMC) weight. */
+enum alouette_undecay_scheme {
+        /* Weight for a Monte Carlo integration using a Cartesian 3-momentum. */
+        ALOUETTE_UNDECAY_CARTESIAN = 0,
+        /* Weight for a Monte Carlo integration using a spherical 3-momentum. */
+        ALOUETTE_UNDECAY_SPHERICAL,
+        /* Weight for an energy-direction representation. */
+        ALOUETTE_UNDECAY_ENERGY,
+        /* Number of weighting schemes. */
+        ALOUETTE_UNDECAY_N_SCHEMES
+};
+
+/** Scheme used by the undecay function in order to compute the BMC weight.
+ *
+ * See above for a list of available schemes. The default is
+ * `ALOUETTE_UNDECAY_CARTESIAN`, which is consistent with the coordinate system
+ * used by TAUOLA and Alouette APIs.
+ *
+ * __Note__ : set the scheme to `ALOUETTE_UNDECAY_ENERGY` if Alouette is used in
+ * combination with a BMC transport engine evolving the energy instead of the
+ * momentum, e.g. like PUMAS.
+ */
+extern enum alouette_undecay_scheme alouette_undecay_scheme;
+
 /**
  * The library PRNG, uniform over (0,1).
  *

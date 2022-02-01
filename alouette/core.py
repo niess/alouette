@@ -175,6 +175,28 @@ class undecay:
         else:
             lib.alouette_undecay_bias = value
 
+    @property
+    def scheme(self):
+        '''Scheme for the backward Monte Carlo weight'''
+        if lib.alouette_undecay_scheme == lib.ALOUETTE_UNDECAY_CARTESIAN:
+            return 'cartesian'
+        elif lib.alouette_undecay_scheme == lib.ALOUETTE_UNDECAY_SPHERICAL:
+            return 'spherical'
+        else:
+            return 'energy'
+
+    @scheme.setter
+    def scheme(self, value):
+        if value == 'cartesian':
+            lib.alouette_undecay_scheme = lib.ALOUETTE_UNDECAY_CARTESIAN
+        elif value == 'spherical':
+            lib.alouette_undecay_scheme = lib.ALOUETTE_UNDECAY_SPHERICAL
+        elif value == 'energy':
+            lib.alouette_undecay_scheme = lib.ALOUETTE_UNDECAY_ENERGY
+        else:
+            exc = ValueError if isinstance(value, (str, bytes)) else TypeError
+            raise exc('bad scheme value.')
+
     def __call__(self, mode=None, pid=None, momentum=None, polarisation=None):
         '''Perform a backward Monte Carlo decay'''
         if mode is None:

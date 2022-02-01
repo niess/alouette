@@ -1314,8 +1314,12 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
 int alouette_undecay_mother = 0;
 
 
-/** Tuning parameter for the spin bias in backward decays. */
+/* Tuning parameter for the spin bias in backward decays. */
 double alouette_undecay_bias = 1.;
+
+/* Scheme for the BMC weight. */
+enum alouette_undecay_scheme alouette_undecay_scheme =
+    ALOUETTE_UNDECAY_CARTESIAN;
 
 /* Backward decay from a tau neutrino to a tau. */
 enum alouette_return alouette_undecay(int mode, int daughter,
@@ -1371,6 +1375,13 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         if ((bias < -1.) || (bias > 1.)) {
                 return message_error(ALOUETTE_RETURN_VALUE_ERROR,
                         "bad bias value (%g)", bias);
+        }
+
+        /* Check the BMC scheme */
+        if ((alouette_undecay_scheme < 0) ||
+            (alouette_undecay_scheme > ALOUETTE_UNDECAY_N_SCHEMES)) {
+                return message_error(ALOUETTE_RETURN_VALUE_ERROR,
+                        "bad scheme value (%u)", alouette_undecay_scheme);
         }
 
         /* Select the decay mode. */
@@ -1517,6 +1528,17 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         const double ee = energy + pi[3];
         const double amtau = tauola_parmas.amtau;
         weight *= amtau * amtau * amtau * gamma * g1 * g1 / (ee * ee * energy);
+
+        if (alouette_undecay_scheme > ALOUETTE_UNDECAY_CARTESIAN) {
+                const double p02 =
+                    Pt[0] * Pt[0] + Pt[1] * Pt[1] + Pt[2] * Pt[2];
+
+                if (alouette_undecay_scheme == ALOUETTE_UNDECAY_SPHERICAL) {
+                        weight *= momentum2 / p02;
+                } else {
+                        weight *= sqrt(momentum2 / p02) * energy / Et;
+                }
+        }
 
         /* Weight for the spin polarisation of the tau mother. */
         if (polarisation_cb != NULL) {

@@ -84,16 +84,33 @@ format of [decay products](#decay-products) is described below.
 
 ### Configuration parameters
 
-The undecay function has two additional configuration parameters, for advanced
-usage. The `alouette_undecay_mother` (`undecay.mother`) parameter allows to
-specify the mother PID in a backward decay. Setting it to 0 results in both
-$\tau^-$ and $\tau^+$ being considered, which is the default setting.
+The undecay function has three additional configuration parameters, for advanced
+usage, detailed below.
 {: .justify}
 
-The `alouette_undecay_bias` (`undecay.bias`) parameter allows to control the
-spin biasing procedure, in backward decays. It must be within $[-1, 1]$.
-Default is 1, which assumes left (right) handed $\tau^-$ ($\tau^+$).
-{: .justify}
+- The `alouette_undecay_mother` (`undecay.mother`) parameter allows to
+  specify the mother PID in a backward decay. Setting it to 0 results in both
+  $\tau^-$ and $\tau^+$ being considered, which is the default setting.
+  {: .justify}
+
+- The `alouette_undecay_bias` (`undecay.bias`) parameter allows to control the
+  spin biasing procedure, in backward decays. It must be within $[-1, 1]$.
+  Default is 1, which assumes left (right) handed $\tau^-$ ($\tau^+$).
+  {: .justify}
+
+- The `alouette_undecay_scheme` (`undecay.scheme`) parameter allows to specify
+  the Monte~Carlo integration scheme when computing the BMC weight. Default is
+  `cartesian`, which is consistent with Alouette and TAUOLA APIs, using a
+  Cartesian 3-momentum. Other possibilities are `spherical` and `energy`. The
+  former assumes spherical coordinates for the 3-momentum, e.g. a flux per unit
+  momentum and solid angle. The latter assumes an energy-direction
+  representation of particles, e.g. like in [PUMAS][PUMAS].
+  {: .justify}
+
+!!! warning
+    The Monte~Carlo integration scheme must be set to `energy` when Alouette is
+    chained with [PUMAS][PUMAS], in BMC mode.
+    {: .justify}
 
 ### C synopsis
 
@@ -303,3 +320,4 @@ returns the (read-only) $\tau$-lepton mass, according to TAUOLA.
 [Jadach1991]: http://doi.org/10.1016/0010-4655(91)90038-m
 [Jezabek1992]: https://doi.org/10.1016/0010-4655(92)90092-D
 [PID]: https://pdg.lbl.gov/2021/reviews/rpp2020-rev-monte-carlo-numbering.pdf
+[PUMAS]: http://niess.github.io/pumas-pages
