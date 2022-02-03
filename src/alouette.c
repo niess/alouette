@@ -1045,9 +1045,10 @@ const char * alouette_message(void)
 }
 
 /* Low level decay routine with TAUOLA. */
-static enum alouette_return decay(
+static enum alouette_return decay0(
     int pid, int mode, struct alouette_products * products)
 {
+#define MAX_TRIALS 10
         /* Register a rally point in case of a TAUOLA error. */
         if (setjmp(alouette_context) != 0) {
                 return message_error(ALOUETTE_RETURN_TAUOLA_ERROR, NULL);
@@ -1057,15 +1058,54 @@ static enum alouette_return decay(
         tauola_jaki.jak2 = mode;
         _products = products;
 
-        /* Call TAUOLA's decay routine. */
-        int type = (pid > 0) ? 1 : 2;
-        double h[4];
-        tauola_decay(&type, h);
-        type += 10;
-        tauola_decay(&type, h);
-        memcpy(_products->polarimeter, h, sizeof _products->polarimeter);
+        /* Decay an unpolarised tau in its rest frame. */
+        int trials;
+        for (trials = 0; trials < MAX_TRIALS; trials++) {
+                /* Call TAUOLA's decay routine. */
+                int type = (pid > 0) ? 1 : 2;
+                double h[4];
+                tauola_decay(&type, h);
+                type += 10;
+                tauola_decay(&type, h);
 
-        return ALOUETTE_RETURN_SUCCESS;
+                /* Look for numeric errors in TAUOLA. */
+                if (_products->size <= 0) {
+                        goto reset_and_retry;
+                }
+
+                int i, j;
+                for (i = 0; i < 4; i++) {
+                        if (isnan(h[i]) || isinf(h[i])) {
+                                goto reset_and_retry;
+                        }
+                }
+
+                for (i = 0; i < _products->size; i++) {
+                        for (j = 0; j < 3; j++) {
+                                if (isnan(_products->P[i][j]) ||
+                                    isinf(_products->P[i][j])) {
+                                        goto reset_and_retry;
+                                }
+                        }
+                }
+
+                /* No error found, let's accept this event. */
+                memcpy(
+                    _products->polarimeter, h, sizeof _products->polarimeter);
+                break;
+
+reset_and_retry:
+                products_reset(_products);
+        }
+
+        if (trials == MAX_TRIALS) {
+                return message_error(ALOUETTE_RETURN_TAUOLA_ERROR,
+                    "could not generate a CM decay");
+        } else {
+                return ALOUETTE_RETURN_SUCCESS;
+        }
+
+#undef MAX_TRIALS
 }
 
 /* Multiply a matrix and a vector. */
@@ -1216,16 +1256,8 @@ enum alouette_return alouette_decay(int mode, int pid, const double momentum[3],
         }
 
         /* Decay a tau in its rest frame. */
-        for (;;) {
-                if ((rc = decay(pid, mode, products)) !=
-                    ALOUETTE_RETURN_SUCCESS)
-                        return rc;
-                if ((!isnan(products->polarimeter[0])) &&
-                    (!isinf(products->P[0][0]))) {
-                        break;
-                } else {
-                        products_reset(products);
-                }
+        if ((rc = decay0(pid, mode, products)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         if (polarisation != NULL) {
@@ -1394,16 +1426,8 @@ enum alouette_return alouette_undecay(int mode, int daughter,
         }
 
         /* Decay an unpolarised tau in its rest frame. */
-        for (;;) {
-                if ((rc = decay(mother, mode, products)) !=
-                    ALOUETTE_RETURN_SUCCESS)
-                        return rc;
-                if ((!isnan(products->polarimeter[0])) &&
-                    (!isinf(products->P[0][0]))) {
-                        break;
-                } else {
-                        products_reset(products);
-                }
+        if ((rc = decay0(mother, mode, products)) != ALOUETTE_RETURN_SUCCESS) {
+                return rc;
         }
 
         /* Get the daughter's index. */
