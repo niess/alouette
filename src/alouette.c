@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* The Alouette API. */
 #include "alouette.h"
@@ -185,7 +186,8 @@ static unsigned long random_get_seed(void)
                 if (n == 1) return seed;
         }
 
-        return 0; /* XXX Fallback method? */
+        /* Use C89 standard library as fallback. */
+        return time(NULL);
 }
 
 /* Set the random seed for the built-in PRNG. */
