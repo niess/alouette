@@ -101,6 +101,17 @@ struct tauola_weight_dadnew {
 };
 extern struct tauola_weight_dadnew tauola_weight_dadnew;
 
+/* TAUOLA version.
+ *
+ * This is an addition to the initial TAUOLA library. It contains the version
+ * tag used to generate the library.
+ */
+struct tauola_version {
+        const char version[16];
+};
+
+extern struct tauola_version tauola_version;
+
 #ifdef __cplusplus
 }
 #endif

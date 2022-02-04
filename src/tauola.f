@@ -16,6 +16,9 @@
       INTEGER        IVER
       DATA           IVER/1/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      COMMON /TAUOLA_VERSION/ VERSION
+      CHARACTER(len=16)::     VERSION='1.1.8-LHC'//CHAR(0)
+      BIND(C) /TAUOLA_VERSION/
 !     ==================================================================
 !     External routines needed by TAUOLA
 !     ==================================================================
@@ -903,7 +906,7 @@ C       first or second tau positions in HEPEVT as in KORALB/Z
         KTOM=1
         IF (IWARM.EQ.1) X=5/(IWARM-1)
         IWARM=1
-        CALL TAUOLA_PRINT('tauola.f:906: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:909: (suppressed)'//CHAR(0))
 !       WRITE(IOUT,7001) JAK1,JAK
         CALL TAUOLA_PRINT('*IVER   = hadronic current version'//CHAR(0))
 !       WRITE(IOUT,7002) IVER
@@ -965,14 +968,14 @@ C     =======================
           CALL DADMKK( 1,IDUM,HDUM,PDUM1,PDUM2)
           CALL DADMKS( 1,IDUM,HDUM,PDUM1,PDUM2,PDUM3,PDUM4,JDUM)
           CALL DADNEW( 1,IDUM,HDUM,PDUM1,PDUM2,PDUMX,JDUM)
-          CALL TAUOLA_PRINT('tauola.f:968: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:971: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7010) NEV1,NEV2,NEVTOT
-          CALL TAUOLA_PRINT('tauola.f:970: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:973: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7011) (NEVDEC(I),GAMPMC(I),GAMPER(I),I= 1,7)
-          CALL TAUOLA_PRINT('tauola.f:972: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:975: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7012)
 !    $         (NEVDEC(I),GAMPMC(I),GAMPER(I),NAMES(I-7),I=8,7+NMODE)
-          CALL TAUOLA_PRINT('tauola.f:975: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:978: (suppressed)'//CHAR(0))
 !         WRITE(IOUT,7013)
         ENDIF
       ELSE
@@ -1329,7 +1332,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1332: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1335: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(803)
         GAMPMC(1)=RAT
@@ -1440,7 +1443,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1443: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1446: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(802)
         GAMPMC(2)=RAT
@@ -1974,7 +1977,7 @@ C       configurations only
      $            -4*AMPI**2*AMNUTA**2           )/AMTAU**2
         ERROR=0
         RAT=GAMM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:1977: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:1980: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVTOT,GAMM,RAT,ERROR
         GAMPMC(3)=RAT
         GAMPER(3)=ERROR
@@ -2075,7 +2078,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2078: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2081: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(4)=RAT
@@ -2603,7 +2606,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2606: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2609: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(5)=RAT
@@ -2736,7 +2739,7 @@ C       configurations only
         ERROR=0
         ERROR=0
         RAT=GAMM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2739: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2742: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVTOT,GAMM,RAT,ERROR
         GAMPMC(6)=RAT
         GAMPER(6)=ERROR
@@ -2850,7 +2853,7 @@ C     =======================
         ERROR=0
         IF(NEVRAW.NE.0) ERROR=SQRT(SSWT/SWT**2-1./FLOAT(NEVRAW))
         RAT=PARGAM/GAMEL
-        CALL TAUOLA_PRINT('tauola.f:2853: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:2856: (suppressed)'//CHAR(0))
 !       WRITE(IOUT, 7010) NEVRAW,NEVACC,NEVOVR,PARGAM,RAT,ERROR
 CC      CALL HPRINT(801)
         GAMPMC(7)=RAT
@@ -4163,7 +4166,7 @@ C       PRINT *,' DADNEW JNPI,NTRIALS,WTMAX =',JNPI,NTRIALS,WTMAX(JNPI)
 C       CALL HBOOK1(801,'WEIGHT DISTRIBUTION  DADNPI    $',100,0.,2.,.0)
 C       PRINT 7004,WTMAX(JNPI)
 1       CONTINUE
-        CALL TAUOLA_PRINT('tauola.f:4166: (suppressed)'//CHAR(0))
+        CALL TAUOLA_PRINT('tauola.f:4169: (suppressed)'//CHAR(0))
 !       WRITE(IOUT,7005)
 C
       ELSEIF(MODE.EQ. 0) THEN
@@ -4228,7 +4231,7 @@ C     =======================
           IF(NEVRAW(JNPI).NE.0)
      &    ERROR=SQRT(SSWT(JNPI)/SWT(JNPI)**2-1./FLOAT(NEVRAW(JNPI)))
           RAT=PARGAM/GAMEL
-          CALL TAUOLA_PRINT('tauola.f:4231: (suppressed)'//CHAR(0))
+          CALL TAUOLA_PRINT('tauola.f:4234: (suppressed)'//CHAR(0))
 !         WRITE(IOUT, 7010) NAMES(JNPI),
 !    &     NEVRAW(JNPI),NEVACC(JNPI),NEVOVR(JNPI),PARGAM,RAT,ERROR
 CC        CALL HPRINT(801)
@@ -8286,7 +8289,7 @@ C-----------------------------------------------------------------------------
       GO TO 5
     4 Y=0.5d0*Y
       IF(dABS(Y) .GT. DELTA) GOTO 2
-      CALL TAUOLA_PRINT('tauola.f:8289: (suppressed)'//CHAR(0))
+      CALL TAUOLA_PRINT('tauola.f:8292: (suppressed)'//CHAR(0))
 !     PRINT 7
       GAUS=0.d0
       RETURN
@@ -8350,7 +8353,7 @@ C-----------------------------------------------------------------------------
       GO TO 5
     4 Y=0.5d0*Y
       IF(dABS(Y) .GT. DELTA) GOTO 2
-      CALL TAUOLA_PRINT('tauola.f:8353: (suppressed)'//CHAR(0))
+      CALL TAUOLA_PRINT('tauola.f:8356: (suppressed)'//CHAR(0))
 !     PRINT 7
       GAUS2=0.D0
       RETURN

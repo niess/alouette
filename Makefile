@@ -36,7 +36,8 @@ package: alouette/$(PACKAGE)
 
 # Bundle TAUOLA
 TAUOLAPP_VERSION= 1.1.8
-TAUOLAPP_TARBALL= TAUOLA.$(TAUOLAPP_VERSION)-LHC.tar.gz
+TAUOLAPP_TAG= -LHC
+TAUOLAPP_TARBALL= TAUOLA.$(TAUOLAPP_VERSION)$(TAUOLAPP_TAG).tar.gz
 
 TAUOLA_DIR=      src/TAUOLA
 TAUOLA_F_DIR=    $(TAUOLA_DIR)/tauola-fortran/tauola-modified
@@ -71,7 +72,7 @@ $(BUILD_DIR)/tauola.o: src/tauola.f | build
 	$(CC) -o $@ $(TAUOLA_FFLAGS) $(SHARED) -c $<
 
 src/tauola.f: src/wrap-tauola.py
-	$(PYTHON) $< -s $(TAUOLA_SOURCES) -i $(TAUOLA_INCLUDES) -w $@
+	$(PYTHON) $< -s $(TAUOLA_SOURCES) -i $(TAUOLA_INCLUDES) -w $@ -v $(TAUOLAPP_VERSION)$(TAUOLAPP_TAG)
 
 $(TAUOLA_DIR):
 	cd src && \

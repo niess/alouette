@@ -5,6 +5,7 @@ def test_vesion():
     '''Test the version sub-module'''
     assert isinstance(version.VERSION, str)
     assert isinstance(version.GIT_REVISION, str)
+    assert isinstance(version.TAUOLA_VERSION, str)
 
     with open('VERSION') as f:
         v = f.read().strip()

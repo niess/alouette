@@ -15,8 +15,11 @@ class FortranEntity:
     called: bool = False
 
 
-def wrap(sources, includes, outfile):
+def wrap(sources, includes, outfile, version=None):
     '''Wrap TAUOLA as a fortran routine'''
+
+    if version is None:
+        version = 'undefined'
 
     code = []
 
@@ -408,6 +411,9 @@ def wrap(sources, includes, outfile):
       INTEGER        IVER
       DATA           IVER/1/
       BIND(C,NAME='tauola_ipcht') /IPChT/
+      COMMON /TAUOLA_VERSION/ VERSION
+      CHARACTER(len=16)::     VERSION='{version[:15]}'//CHAR(0)
+      BIND(C) /TAUOLA_VERSION/
 !     ==================================================================
 !     External routines needed by TAUOLA
 !     ==================================================================
@@ -493,6 +499,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '-w', dest='outfile', default='tauola.f', help='wrapper file'
     )
+    parser.add_argument('-v', dest='version', help='source version')
     args = parser.parse_args()
 
-    wrap(args.sources, args.includes, args.outfile)
+    wrap(args.sources, args.includes, args.outfile, args.version)
