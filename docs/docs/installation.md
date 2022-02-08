@@ -35,8 +35,9 @@ used for the build process.
 {: .justify}
 
 !!! warning
-    A Fortran 95 compatible compiler is required in order to build Alouette from
-    source, e.g. gfortran. However, there is no runtime dependency on Fortran.
+    A Fortran 2003 compatible compiler is required in order to build Alouette
+    from source, e.g. gfortran. However, there is no runtime dependency on
+    Fortran.
     {: .justify}
 
 [alouette_make]: https://github.com/niess/alouette/blob/master/Makefile
