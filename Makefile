@@ -25,7 +25,7 @@ BUILD_DIR= build
 
 # Version flags
 ALOUETTE_VERSION=      $(shell cat VERSION)
-ALOUETTE_GIT_REVISION= $(shell git describe --match=NeVeRmAtCh --always --dirty)
+ALOUETTE_GIT_REVISION= $(shell git describe --match=NeVeRmAtCh --always --dirty 2> /dev/null || echo unknown)
 
 .PHONY: lib
 lib: lib/$(LIB)
